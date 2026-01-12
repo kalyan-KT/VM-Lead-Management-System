@@ -33,6 +33,8 @@ interface LeadSidebarProps {
   onSourceFilterChange: (source: LeadSource | 'all') => void;
   priorityFilter: LeadPriority | 'all';
   onPriorityFilterChange: (priority: LeadPriority | 'all') => void;
+  className?: string;
+  onItemClick?: () => void;
 }
 
 const SOURCES: LeadSource[] = ['LinkedIn', 'WhatsApp', 'Referral', 'Website', 'Other'];
@@ -51,6 +53,8 @@ export function LeadSidebar({
   onSourceFilterChange,
   priorityFilter,
   onPriorityFilterChange,
+  className,
+  onItemClick,
 }: LeadSidebarProps) {
   const counts = {
     all: leads.length,
@@ -77,7 +81,7 @@ export function LeadSidebar({
   ];
 
   return (
-    <aside className="w-64 h-full bg-sidebar border-r border-sidebar-border flex flex-col">
+    <aside className={cn("w-64 h-full bg-sidebar border-r border-sidebar-border flex flex-col", className)}>
       {/* Logo / Title */}
       <div className="p-4 border-b border-sidebar-border flex flex-col items-start text-left">
         <img src="/logo.png" alt="Lead Management System" className="h-10 w-auto mb-2" />
@@ -102,7 +106,10 @@ export function LeadSidebar({
         {navItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => onViewChange(item.id)}
+            onClick={() => {
+              onViewChange(item.id);
+              onItemClick?.();
+            }}
             className={cn(
               'sidebar-nav-item w-full justify-between',
               activeView === item.id ? 'sidebar-nav-item-active' : 'sidebar-nav-item-inactive'

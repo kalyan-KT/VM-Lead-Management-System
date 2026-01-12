@@ -6,7 +6,8 @@ import { LeadForm } from './LeadForm';
 import { LeadDetail } from './LeadDetail';
 import { LeadSidebar } from './LeadSidebar';
 import { Button } from '@/components/ui/button';
-import { Plus, AlertCircle, Flame, Clock } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Plus, AlertCircle, Flame, Clock, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function Dashboard() {
@@ -20,6 +21,7 @@ export function Dashboard() {
   const [editingLead, setEditingLead] = useState<Lead | undefined>();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     setLeads(getLeads());
@@ -165,7 +167,42 @@ export function Dashboard() {
   );
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background flex-col md:flex-row">
+      {/* Mobile Header */}
+      <div className="md:hidden border-b bg-background p-4 flex items-center gap-3 sticky top-0 z-20">
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="-ml-2">
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-72">
+            <LeadSidebar
+              leads={leads}
+              activeView={activeView}
+              onViewChange={setActiveView}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              sourceFilter={sourceFilter}
+              onSourceFilterChange={setSourceFilter}
+              priorityFilter={priorityFilter}
+              onPriorityFilterChange={setPriorityFilter}
+              className="w-full border-r-0"
+              onItemClick={() => setMobileMenuOpen(false)}
+            />
+          </SheetContent>
+        </Sheet>
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="Logo" className="h-8 w-auto" />
+          <div className="flex flex-col">
+            <h1 className="font-semibold text-sm leading-none">Venture Mond</h1>
+            <span className="text-[10px] text-muted-foreground leading-none mt-0.5">Lead Management System</span>
+          </div>
+        </div>
+      </div>
+
       <LeadSidebar
         leads={leads}
         activeView={activeView}
@@ -178,9 +215,10 @@ export function Dashboard() {
         onSourceFilterChange={setSourceFilter}
         priorityFilter={priorityFilter}
         onPriorityFilterChange={setPriorityFilter}
+        className="hidden md:flex"
       />
 
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto h-[calc(100vh-65px)] md:h-screen">
         <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
