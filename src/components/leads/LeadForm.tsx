@@ -1,0 +1,359 @@
+import { useState, useEffect } from 'react';
+import { Lead, LeadSource, LeadStatus, LeadPriority } from '@/types/lead';
+import { generateId, getToday, isLockedStatus } from '@/lib/leadStorage';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { X, Plus, AlertCircle } from 'lucide-react';
+
+interface LeadFormProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (lead: Lead) => void;
+  existingLead?: Lead;
+}
+
+const SOURCES: LeadSource[] = ['LinkedIn', 'WhatsApp', 'Referral', 'Website', 'Other'];
+const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Follow-up', 'Closed', 'Dropped'];
+const PRIORITIES: LeadPriority[] = ['High', 'Medium', 'Low'];
+
+export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps) {
+  const [name, setName] = useState('');
+  const [source, setSource] = useState<LeadSource>('LinkedIn');
+  const [primaryContact, setPrimaryContact] = useState('');
+  const [linkedInUrl, setLinkedInUrl] = useState('');
+  const [status, setStatus] = useState<LeadStatus>('New');
+  const [nextAction, setNextAction] = useState('Contact lead');
+  const [nextActionDate, setNextActionDate] = useState(getToday());
+  const [contextNote, setContextNote] = useState('');
+  const [priority, setPriority] = useState<LeadPriority>('Medium');
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  const [valueEstimate, setValueEstimate] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const isEditing = !!existingLead;
+  const isLocked = existingLead && isLockedStatus(existingLead.status);
+
+  useEffect(() => {
+    if (existingLead) {
+      setName(existingLead.name);
+      setSource(existingLead.source);
+      setPrimaryContact(existingLead.primaryContact);
+      setLinkedInUrl(existingLead.linkedInUrl);
+      setStatus(existingLead.status);
+      setNextAction(existingLead.nextAction);
+      setNextActionDate(existingLead.nextActionDate);
+      setContextNote(existingLead.contextNote || '');
+      setPriority(existingLead.priority);
+      setTags(existingLead.tags);
+      setValueEstimate(existingLead.valueEstimate || '');
+    } else {
+      resetForm();
+    }
+  }, [existingLead, open]);
+
+  const resetForm = () => {
+    setName('');
+    setSource('LinkedIn');
+    setPrimaryContact('');
+    setLinkedInUrl('');
+    setStatus('New');
+    setNextAction('Contact lead');
+    setNextActionDate(getToday());
+    setContextNote('');
+    setPriority('Medium');
+    setTags([]);
+    setTagInput('');
+    setValueEstimate('');
+    setErrors({});
+  };
+
+  const validateLinkedInUrl = (url: string): boolean => {
+    // Remove protocol and www to check domain
+    const cleanUrl = url.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, '');
+    return cleanUrl.startsWith('linkedin.com/');
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!name.trim()) newErrors.name = 'Name is required';
+    if (!primaryContact.trim()) newErrors.primaryContact = 'Primary contact is required';
+    if (!linkedInUrl.trim()) {
+      newErrors.linkedInUrl = 'LinkedIn URL is required';
+    } else if (!validateLinkedInUrl(linkedInUrl)) {
+      newErrors.linkedInUrl = 'URL must contain linkedin.com/';
+    }
+    if (!nextAction.trim()) newErrors.nextAction = 'Next action is required';
+    if (!nextActionDate) newErrors.nextActionDate = 'Next action date is required';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleAddTag = () => {
+    const trimmedTag = tagInput.trim().toLowerCase();
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      setTags([...tags, trimmedTag]);
+      setTagInput('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter((t) => t !== tagToRemove));
+  };
+
+  const handleSubmit = () => {
+    if (!validateForm()) return;
+
+    const lead: Lead = {
+      id: existingLead?.id || generateId(),
+      name: name.trim(),
+      source,
+      primaryContact: primaryContact.trim(),
+      linkedInUrl: linkedInUrl.trim(),
+      status,
+      nextAction: nextAction.trim(),
+      nextActionDate,
+      contextNote: contextNote.trim() || undefined,
+      priority,
+      tags,
+      valueEstimate: valueEstimate.trim() || undefined,
+      notes: existingLead?.notes || [],
+      createdAt: existingLead?.createdAt || new Date().toISOString(),
+      lastContactedAt: existingLead?.status !== status 
+        ? new Date().toISOString() 
+        : existingLead?.lastContactedAt || new Date().toISOString(),
+    };
+
+    onSave(lead);
+    resetForm();
+    onClose();
+  };
+
+  const isValid = name.trim() && primaryContact.trim() && linkedInUrl.trim() && 
+    validateLinkedInUrl(linkedInUrl) && nextAction.trim() && nextActionDate;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold">
+            {isEditing ? (isLocked ? 'View Lead' : 'Edit Lead') : 'Add New Lead'}
+          </DialogTitle>
+        </DialogHeader>
+
+        {isLocked && (
+          <div className="flex items-center gap-2 p-3 bg-muted rounded-lg text-sm text-muted-foreground">
+            <AlertCircle className="h-4 w-4" />
+            This lead is {existingLead.status.toLowerCase()} and cannot be edited.
+          </div>
+        )}
+
+        <div className="grid gap-6 py-4">
+          {/* Mandatory Fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name *</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Person or Company name"
+                disabled={isLocked}
+                className={errors.name ? 'border-destructive' : ''}
+              />
+              {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="source">Source *</Label>
+              <Select value={source} onValueChange={(v) => setSource(v as LeadSource)} disabled={isLocked}>
+                <SelectTrigger id="source">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SOURCES.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="primaryContact">Primary Contact *</Label>
+              <Input
+                id="primaryContact"
+                value={primaryContact}
+                onChange={(e) => setPrimaryContact(e.target.value)}
+                placeholder="Email or Phone"
+                disabled={isLocked}
+                className={errors.primaryContact ? 'border-destructive' : ''}
+              />
+              {errors.primaryContact && <p className="text-xs text-destructive">{errors.primaryContact}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="linkedInUrl">LinkedIn Profile URL *</Label>
+              <Input
+                id="linkedInUrl"
+                value={linkedInUrl}
+                onChange={(e) => setLinkedInUrl(e.target.value)}
+                placeholder="linkedin.com/in/username"
+                disabled={isLocked}
+                className={errors.linkedInUrl ? 'border-destructive' : ''}
+              />
+              {errors.linkedInUrl && <p className="text-xs text-destructive">{errors.linkedInUrl}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="status">Status *</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as LeadStatus)} disabled={isLocked}>
+                <SelectTrigger id="status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="nextAction">Next Action *</Label>
+              <Input
+                id="nextAction"
+                value={nextAction}
+                onChange={(e) => setNextAction(e.target.value)}
+                placeholder="What's next?"
+                disabled={isLocked}
+                className={errors.nextAction ? 'border-destructive' : ''}
+              />
+              {errors.nextAction && <p className="text-xs text-destructive">{errors.nextAction}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="nextActionDate">Next Action Date *</Label>
+              <Input
+                id="nextActionDate"
+                type="date"
+                value={nextActionDate}
+                onChange={(e) => setNextActionDate(e.target.value)}
+                disabled={isLocked}
+                className={errors.nextActionDate ? 'border-destructive' : ''}
+              />
+              {errors.nextActionDate && <p className="text-xs text-destructive">{errors.nextActionDate}</p>}
+            </div>
+          </div>
+
+          {/* Optional Fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="priority">Priority</Label>
+              <Select value={priority} onValueChange={(v) => setPriority(v as LeadPriority)} disabled={isLocked}>
+                <SelectTrigger id="priority">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRIORITIES.map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="valueEstimate">Value Estimate</Label>
+              <Input
+                id="valueEstimate"
+                value={valueEstimate}
+                onChange={(e) => setValueEstimate(e.target.value)}
+                placeholder="e.g., $10,000"
+                disabled={isLocked}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="contextNote">Context Note</Label>
+            <Textarea
+              id="contextNote"
+              value={contextNote}
+              onChange={(e) => setContextNote(e.target.value)}
+              placeholder="Any additional context..."
+              rows={3}
+              disabled={isLocked}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Tags</Label>
+            <div className="flex gap-2">
+              <Input
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                placeholder="Add a tag..."
+                disabled={isLocked}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddTag();
+                  }
+                }}
+              />
+              <Button type="button" variant="outline" size="icon" onClick={handleAddTag} disabled={isLocked}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="gap-1">
+                    {tag}
+                    {!isLocked && (
+                      <button onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-destructive">
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <Button variant="outline" onClick={onClose}>
+            {isLocked ? 'Close' : 'Cancel'}
+          </Button>
+          {!isLocked && (
+            <Button onClick={handleSubmit} disabled={!isValid}>
+              {isEditing ? 'Save Changes' : 'Add Lead'}
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
