@@ -26,13 +26,16 @@ interface LeadFormProps {
   onClose: () => void;
   onSave: (lead: Lead) => void;
   existingLead?: Lead;
+  availableTags?: string[];
 }
 
 const SOURCES: LeadSource[] = ['LinkedIn', 'WhatsApp', 'Referral', 'Website', 'Other'];
 const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Follow-up', 'Closed', 'Dropped'];
 const PRIORITIES: LeadPriority[] = ['High', 'Medium', 'Low'];
 
-export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps) {
+export function LeadForm({ open, onClose, onSave, existingLead, availableTags = [] }: LeadFormProps) {
+  // Deduplicate tags for the list
+  const userTags = Array.from(new Set(availableTags)).sort();
   const [name, setName] = useState('');
   const [source, setSource] = useState<LeadSource>('LinkedIn');
   const [primaryContact, setPrimaryContact] = useState('');
@@ -110,7 +113,7 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
     const newErrors: Record<string, string> = {};
 
     if (!name.trim()) newErrors.name = 'Name is required';
-    if (!primaryContact.trim()) newErrors.primaryContact = 'Primary contact is required';
+    // Primary contact is now optional
     if (linkedInUrl.trim() && !validateLinkedInUrl(linkedInUrl)) {
       newErrors.linkedInUrl = 'URL must contain linkedin.com/';
     }
@@ -165,7 +168,7 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
     onClose();
   };
 
-  const isValid = name.trim() && primaryContact.trim() &&
+  const isValid = name.trim() &&
     (!linkedInUrl.trim() || validateLinkedInUrl(linkedInUrl)) && nextAction.trim() && nextActionDate;
 
   return (
@@ -217,7 +220,7 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="primaryContact">Primary Contact *</Label>
+              <Label htmlFor="primaryContact">Primary Contact</Label>
               <Input
                 id="primaryContact"
                 value={primaryContact}
@@ -351,9 +354,11 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
               </div>
             ))}
             {!isLocked && (
-              <Button type="button" variant="outline" size="sm" onClick={() => setRelevantLinks([...relevantLinks, ''])}>
-                <Plus className="h-4 w-4 mr-2" /> Add Link
-              </Button>
+              <div className="pt-1">
+                <Button type="button" variant="outline" size="sm" onClick={() => setRelevantLinks([...relevantLinks, ''])}>
+                  <Plus className="h-4 w-4 mr-2" /> Add Link
+                </Button>
+              </div>
             )}
           </div>
 
@@ -445,9 +450,11 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
               </div>
             ))}
             {!isLocked && (
-              <Button type="button" variant="outline" size="sm" onClick={() => setFollowUps([...followUps, { date: getToday(), note: '' }])}>
-                <Plus className="h-4 w-4 mr-2" /> Add Follow-up
-              </Button>
+              <div className="pt-1">
+                <Button type="button" variant="outline" size="sm" onClick={() => setFollowUps([...followUps, { date: getToday(), note: '' }])}>
+                  <Plus className="h-4 w-4 mr-2" /> Add Follow-up
+                </Button>
+              </div>
             )}
           </div>
 
@@ -490,9 +497,11 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
               </div>
             ))}
             {!isLocked && (
-              <Button type="button" variant="outline" size="sm" onClick={() => setMeetingNotes([...meetingNotes, { title: `Meeting ${meetingNotes.length + 1}`, note: '' }])}>
-                <Plus className="h-4 w-4 mr-2" /> Add Meeting
-              </Button>
+              <div className="pt-1">
+                <Button type="button" variant="outline" size="sm" onClick={() => setMeetingNotes([...meetingNotes, { title: `Meeting ${meetingNotes.length + 1}`, note: '' }])}>
+                  <Plus className="h-4 w-4 mr-2" /> Add Meeting
+                </Button>
+              </div>
             )}
           </div>
 
@@ -510,6 +519,7 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
                 onChange={(e) => setTagInput(e.target.value)}
                 placeholder="Add a tag..."
                 disabled={isLocked}
+                list="tag-suggestions"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -517,6 +527,11 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
                   }
                 }}
               />
+              <datalist id="tag-suggestions">
+                {userTags.map((tag) => (
+                  <option key={tag} value={tag} />
+                ))}
+              </datalist>
               <Button type="button" variant="outline" size="icon" onClick={handleAddTag} disabled={isLocked}>
                 <Plus className="h-4 w-4" />
               </Button>

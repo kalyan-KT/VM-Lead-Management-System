@@ -6,6 +6,7 @@ import { LeadTable } from './LeadTable';
 import { LeadForm } from './LeadForm';
 import { LeadDetail } from './LeadDetail';
 import { LeadSidebar } from './LeadSidebar';
+import { DashboardStats } from './DashboardStats';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -133,6 +134,11 @@ export function Dashboard() {
     return { overdue, today, upcoming };
   }, [filteredLeads, activeView]);
 
+  // Collect all unique tags for autocomplete
+  const allTags = useMemo(() => {
+    return Array.from(new Set(leads.flatMap((lead) => lead.tags || [])));
+  }, [leads]);
+
   const renderLeadSection = (
     title: string,
     icon: React.ReactNode,
@@ -246,7 +252,13 @@ export function Dashboard() {
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <UserButton />
+            <UserButton
+              appearance={{
+                elements: {
+                  userButtonPopoverFooter: "hidden"
+                }
+              }}
+            />
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="gap-2">
@@ -281,6 +293,8 @@ export function Dashboard() {
             <LeadTable leads={filteredLeads} onLeadClick={handleLeadClick} />
           ) : activeView === 'all' && groupedLeads ? (
             <>
+              <DashboardStats leads={leads} />
+
               {renderLeadSection(
                 'Overdue',
                 <AlertCircle className="h-4 w-4" />,
@@ -324,6 +338,7 @@ export function Dashboard() {
         }}
         onSave={handleSaveLead}
         existingLead={editingLead}
+        availableTags={allTags}
       />
 
       <LeadDetail
