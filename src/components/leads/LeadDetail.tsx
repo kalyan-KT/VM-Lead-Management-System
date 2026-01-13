@@ -20,16 +20,17 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Calendar, 
-  Mail, 
-  Phone, 
-  Link2, 
-  ArrowRight, 
+import {
+  Calendar,
+  Mail,
+  Phone,
+  Link2,
+  ArrowRight,
   Plus,
   Clock,
   AlertCircle,
-  ExternalLink
+  ExternalLink,
+  Download
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,12 +39,13 @@ interface LeadDetailProps {
   open: boolean;
   onClose: () => void;
   onUpdate: (lead: Lead) => void;
+  onEdit: () => void;
 }
 
 const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Follow-up', 'Closed', 'Dropped'];
 const PRIORITIES: LeadPriority[] = ['High', 'Medium', 'Low'];
 
-export function LeadDetail({ lead, open, onClose, onUpdate }: LeadDetailProps) {
+export function LeadDetail({ lead, open, onClose, onUpdate, onEdit }: LeadDetailProps) {
   const [newNote, setNewNote] = useState('');
   const [nextAction, setNextAction] = useState('');
   const [nextActionDate, setNextActionDate] = useState('');
@@ -65,10 +67,10 @@ export function LeadDetail({ lead, open, onClose, onUpdate }: LeadDetailProps) {
 
   const isLocked = isLockedStatus(lead.status);
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!newNote.trim()) return;
-    
-    const note = addNote(lead.id, newNote.trim());
+
+    const note = await addNote(lead.id, newNote.trim());
     if (note) {
       onUpdate({
         ...lead,
@@ -80,7 +82,7 @@ export function LeadDetail({ lead, open, onClose, onUpdate }: LeadDetailProps) {
 
   const validateAndUpdateStatus = (newStatus: LeadStatus) => {
     setDateError('');
-    
+
     if (['Interested', 'Follow-up'].includes(newStatus)) {
       const today = new Date(getToday());
       const actionDate = new Date(nextActionDate || lead.nextActionDate);
@@ -89,7 +91,7 @@ export function LeadDetail({ lead, open, onClose, onUpdate }: LeadDetailProps) {
         return;
       }
     }
-    
+
     setStatus(newStatus);
     onUpdate({
       ...lead,
@@ -100,7 +102,7 @@ export function LeadDetail({ lead, open, onClose, onUpdate }: LeadDetailProps) {
 
   const handleSaveFollowUp = () => {
     setDateError('');
-    
+
     if (['Interested', 'Follow-up'].includes(status)) {
       const today = new Date(getToday());
       const actionDate = new Date(nextActionDate);
@@ -138,12 +140,19 @@ export function LeadDetail({ lead, open, onClose, onUpdate }: LeadDetailProps) {
     <Sheet open={open} onOpenChange={onClose}>
       <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
         <SheetHeader className="pb-4">
-          <SheetTitle className="text-xl font-semibold flex items-center gap-3">
-            {lead.name}
-            <Badge className={cn('text-xs', getStatusColor(lead.status))}>
-              {lead.status}
-            </Badge>
-          </SheetTitle>
+          <div className="flex items-center justify-between">
+            <SheetTitle className="text-xl font-semibold flex items-center gap-3">
+              {lead.name}
+              <Badge className={cn('text-xs', getStatusColor(lead.status))}>
+                {lead.status}
+              </Badge>
+            </SheetTitle>
+            {!isLocked && (
+              <Button variant="outline" size="sm" onClick={onEdit}>
+                Edit
+              </Button>
+            )}
+          </div>
         </SheetHeader>
 
         {isLocked && (
@@ -164,18 +173,20 @@ export function LeadDetail({ lead, open, onClose, onUpdate }: LeadDetailProps) {
               )}
               <span className="truncate">{lead.primaryContact}</span>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Link2 className="h-4 w-4 text-muted-foreground" />
-              <a
-                href={`https://${lead.linkedInUrl}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline truncate flex items-center gap-1"
-              >
-                {lead.linkedInUrl}
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            </div>
+            {lead.linkedInUrl && (
+              <div className="flex items-center gap-2 text-sm">
+                <Link2 className="h-4 w-4 text-muted-foreground" />
+                <a
+                  href={`https://${lead.linkedInUrl}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline truncate flex items-center gap-1"
+                >
+                  {lead.linkedInUrl}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+            )}
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <span>Created: {new Date(lead.createdAt).toLocaleDateString()}</span>
@@ -209,6 +220,79 @@ export function LeadDetail({ lead, open, onClose, onUpdate }: LeadDetailProps) {
               <span className="font-medium">{lead.valueEstimate}</span>
             </div>
           )}
+
+          {/* Relevant Links */}
+          {lead.relevantLinks && lead.relevantLinks.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Relevant Links</p>
+              <div className="flex flex-col gap-1">
+                {lead.relevantLinks.map((link, i) => (
+                  <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                    <Link2 className="h-3 w-3" /> {link} <ExternalLink className="h-3 w-3" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Documents */}
+          {lead.documents && lead.documents.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Documents</p>
+              <div className="space-y-1">
+                {lead.documents.map((doc, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm p-2 bg-muted/30 rounded-md">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <span className="font-medium truncate max-w-[150px]" title={doc.filename}>{doc.filename}</span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">({Math.round(doc.size / 1024)} KB)</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 ml-2 hover:text-primary"
+                      onClick={() => {
+                        const filename = doc.path.split(/[/\\]/).pop();
+                        const url = `http://localhost:5000/api/leads/files/${filename}`;
+                        window.open(url, '_blank');
+                      }}
+                      title="Download"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Follow-ups */}
+          {lead.followUps && lead.followUps.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Follow-up Schedule</p>
+              <div className="space-y-1 border-l-2 pl-2">
+                {lead.followUps.map((fu, i) => (
+                  <div key={i} className="text-sm">
+                    <span className="font-semibold">{fu.date}:</span> {fu.note}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Meeting Notes */}
+          {lead.meetingNotes && lead.meetingNotes.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Meeting Notes</p>
+              <div className="space-y-2">
+                {lead.meetingNotes.map((note, i) => (
+                  <div key={i} className="bg-muted/30 p-2 rounded">
+                    <div className="font-medium text-sm">{note.title}</div>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{note.note}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <Separator className="my-6" />
@@ -223,9 +307,9 @@ export function LeadDetail({ lead, open, onClose, onUpdate }: LeadDetailProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select 
-                value={status} 
-                onValueChange={(v) => validateAndUpdateStatus(v as LeadStatus)} 
+              <Select
+                value={status}
+                onValueChange={(v) => validateAndUpdateStatus(v as LeadStatus)}
                 disabled={isLocked}
               >
                 <SelectTrigger>
@@ -241,9 +325,9 @@ export function LeadDetail({ lead, open, onClose, onUpdate }: LeadDetailProps) {
 
             <div className="space-y-2">
               <Label>Priority</Label>
-              <Select 
-                value={priority} 
-                onValueChange={(v) => setPriority(v as LeadPriority)} 
+              <Select
+                value={priority}
+                onValueChange={(v) => setPriority(v as LeadPriority)}
                 disabled={isLocked}
               >
                 <SelectTrigger>
@@ -301,9 +385,9 @@ export function LeadDetail({ lead, open, onClose, onUpdate }: LeadDetailProps) {
                 placeholder="Add a note..."
                 rows={3}
               />
-              <Button 
-                onClick={handleAddNote} 
-                size="sm" 
+              <Button
+                onClick={handleAddNote}
+                size="sm"
                 disabled={!newNote.trim()}
                 className="gap-2"
               >

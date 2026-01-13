@@ -1,6 +1,6 @@
 import { Lead, LeadStatus, ConversationNote } from '@/types/lead';
 
-const STORAGE_KEY = 'personal_leads';
+const API_URL = 'http://localhost:5000/api/leads';
 
 export const generateId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -31,130 +31,86 @@ export const isActiveStatus = (status: LeadStatus): boolean => {
 };
 
 export const isLockedStatus = (status: LeadStatus): boolean => {
+  // Check if status is defined
+  if (!status) return false;
   return ['Closed', 'Dropped'].includes(status);
 };
 
-// Mock initial data
-const mockLeads: Lead[] = [
-  {
-    id: generateId(),
-    name: 'Sarah Chen',
-    source: 'LinkedIn',
-    primaryContact: 'sarah.chen@techcorp.com',
-    linkedInUrl: 'linkedin.com/in/sarahchen',
-    status: 'Interested',
-    nextAction: 'Schedule demo call',
-    nextActionDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    priority: 'High',
-    tags: ['enterprise', 'tech'],
-    notes: [
-      { id: generateId(), content: 'Connected on LinkedIn, showed interest in our platform', createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() }
-    ],
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    lastContactedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: generateId(),
-    name: 'Michael Torres',
-    source: 'Referral',
-    primaryContact: '+1 555-0123',
-    linkedInUrl: 'linkedin.com/in/michaeltorres',
-    status: 'Follow-up',
-    nextAction: 'Send proposal document',
-    nextActionDate: getToday(),
-    priority: 'High',
-    tags: ['startup', 'saas'],
-    notes: [
-      { id: generateId(), content: 'Referred by John D. - needs CRM solution', createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() }
-    ],
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    lastContactedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: generateId(),
-    name: 'Emily Watson',
-    source: 'LinkedIn',
-    primaryContact: 'emily.w@innovate.io',
-    linkedInUrl: 'linkedin.com/in/emilywatson',
-    status: 'Contacted',
-    nextAction: 'Wait for response',
-    nextActionDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    priority: 'Medium',
-    tags: ['fintech'],
-    notes: [],
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    lastContactedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: generateId(),
-    name: 'David Park',
-    source: 'Website',
-    primaryContact: 'david@parkventures.com',
-    linkedInUrl: 'linkedin.com/in/davidpark',
-    status: 'New',
-    nextAction: 'Initial outreach',
-    nextActionDate: getToday(),
-    priority: 'Low',
-    tags: ['investor'],
-    notes: [],
-    createdAt: new Date().toISOString(),
-    lastContactedAt: new Date().toISOString(),
-  },
-  {
-    id: generateId(),
-    name: 'Lisa Johnson',
-    source: 'WhatsApp',
-    primaryContact: '+1 555-9876',
-    linkedInUrl: 'linkedin.com/in/lisajohnson',
-    status: 'Closed',
-    nextAction: 'Deal closed',
-    nextActionDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    priority: 'High',
-    tags: ['enterprise', 'closed-won'],
-    valueEstimate: '$50,000',
-    notes: [
-      { id: generateId(), content: 'Contract signed!', createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() }
-    ],
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    lastContactedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
-export const getLeads = (): Lead[] => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(mockLeads));
-    return mockLeads;
+export const getLeads = async (): Promise<Lead[]> => {
+  try {
+    const response = await fetch(API_URL);
+    if (!response.ok) throw new Error('Failed to fetch leads');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching leads:', error);
+    return [];
   }
-  return JSON.parse(stored);
 };
 
-export const saveLead = (lead: Lead): void => {
-  const leads = getLeads();
-  const existingIndex = leads.findIndex(l => l.id === lead.id);
-  if (existingIndex >= 0) {
-    leads[existingIndex] = lead;
-  } else {
-    leads.push(lead);
+export const saveLead = async (lead: Lead): Promise<Lead> => {
+  try {
+    // Determine if create or update based on ID format (simple heuristic)
+    // Backend IDs are Mongo ObjectIds (24 hex chars). Frontend gen IDs are shorter/alphanumeric.
+    const isMongoId = /^[0-9a-fA-F]{24}$/.test(lead.id);
+
+    if (isMongoId) {
+      // Update
+      const response = await fetch(`${API_URL}/${lead.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(lead),
+      });
+      if (!response.ok) throw new Error('Failed to update lead');
+      return await response.json();
+    } else {
+      // Create - drop the temp ID
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, ...leadData } = lead;
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(leadData),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to create lead: ${errorText}`);
+      }
+      return await response.json();
+    }
+  } catch (error) {
+    console.error('Error saving lead:', error);
+    throw error;
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
 };
 
-export const getLeadById = (id: string): Lead | undefined => {
-  return getLeads().find(l => l.id === id);
+export const getLeadById = async (id: string): Promise<Lead | undefined> => {
+  try {
+    const response = await fetch(`${API_URL}/${id}`);
+    if (!response.ok) return undefined;
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting lead:', error);
+    return undefined;
+  }
 };
 
-export const addNote = (leadId: string, content: string): ConversationNote | null => {
-  const leads = getLeads();
-  const lead = leads.find(l => l.id === leadId);
-  if (!lead) return null;
-  
-  const note: ConversationNote = {
-    id: generateId(),
-    content,
-    createdAt: new Date().toISOString(),
-  };
-  lead.notes.push(note);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
-  return note;
+export const addNote = async (leadId: string, content: string): Promise<ConversationNote | null> => {
+  try {
+    const response = await fetch(`${API_URL}/${leadId}/notes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ content }),
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (error) {
+    console.error('Error adding note:', error);
+    return null;
+  }
 };

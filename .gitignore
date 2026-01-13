@@ -22,3 +22,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment Variables
+.env
+backend/.env
+
+# Local Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Sensitive Documentation
+AWS_DEPLOYMENT_GUIDE.md

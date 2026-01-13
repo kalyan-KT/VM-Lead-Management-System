@@ -8,12 +8,32 @@ export interface ConversationNote {
   createdAt: string;
 }
 
+
+export interface Document {
+  filename: string;
+  mimetype: string;
+  size: number;
+  path: string;
+  uploadedAt?: string;
+}
+
+export interface FollowUp {
+  date: string;
+  note: string;
+}
+
+export interface MeetingNote {
+  title: string;
+  note: string;
+  createdAt?: string;
+}
+
 export interface Lead {
   id: string;
   name: string;
   source: LeadSource;
   primaryContact: string;
-  linkedInUrl: string;
+  linkedInUrl?: string; // Optional
   status: LeadStatus;
   nextAction: string;
   nextActionDate: string;
@@ -22,8 +42,12 @@ export interface Lead {
   tags: string[];
   valueEstimate?: string;
   notes: ConversationNote[];
+  relevantLinks: string[];
+  documents: Document[];
+  followUps: FollowUp[];
+  meetingNotes: MeetingNote[];
   createdAt: string;
   lastContactedAt: string;
 }
 
-export type ViewFilter = 'all' | 'today' | 'overdue' | 'active' | 'closed';
+export type ViewFilter = 'all' | 'today' | 'overdue' | 'active' | 'closed' | 'table';

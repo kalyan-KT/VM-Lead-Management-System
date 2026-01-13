@@ -2,21 +2,26 @@ import { useState, useMemo, useEffect } from 'react';
 import { Lead, ViewFilter, LeadSource, LeadStatus, LeadPriority } from '@/types/lead';
 import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus } from '@/lib/leadStorage';
 import { LeadCard } from './LeadCard';
+import { LeadTable } from './LeadTable';
 import { LeadForm } from './LeadForm';
 import { LeadDetail } from './LeadDetail';
 import { LeadSidebar } from './LeadSidebar';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Plus, AlertCircle, Flame, Clock, Menu } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Plus, AlertCircle, Flame, Clock, Menu, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { LeadFilters } from './LeadFilters';
+import { UserButton } from "@clerk/clerk-react";
 
 export function Dashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [activeView, setActiveView] = useState<ViewFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
-  const [sourceFilter, setSourceFilter] = useState<LeadSource | 'all'>('all');
-  const [priorityFilter, setPriorityFilter] = useState<LeadPriority | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [sourceFilter, setSourceFilter] = useState<string[]>([]);
+  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | undefined>();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -24,13 +29,23 @@ export function Dashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    setLeads(getLeads());
+    const fetchLeads = async () => {
+      const data = await getLeads();
+      setLeads(data);
+    };
+    fetchLeads();
   }, []);
 
-  const handleSaveLead = (lead: Lead) => {
-    saveLead(lead);
-    setLeads(getLeads());
-    setEditingLead(undefined);
+  const handleSaveLead = async (lead: Lead) => {
+    try {
+      await saveLead(lead);
+      const data = await getLeads();
+      setLeads(data);
+      setEditingLead(undefined);
+    } catch (error) {
+      console.error('Failed to save lead:', error);
+      alert('Failed to save lead. Please check the console for details.');
+    }
   };
 
   const handleLeadClick = (lead: Lead) => {
@@ -38,12 +53,14 @@ export function Dashboard() {
     setDetailOpen(true);
   };
 
-  const handleUpdateLead = (lead: Lead) => {
-    saveLead(lead);
-    setLeads(getLeads());
+  const handleUpdateLead = async (lead: Lead) => {
+    await saveLead(lead);
+    const data = await getLeads();
+    setLeads(data);
     setSelectedLead(lead);
   };
 
+  // Derived state
   const filteredLeads = useMemo(() => {
     let result = leads;
 
@@ -54,24 +71,24 @@ export function Dashboard() {
         (l) =>
           l.name.toLowerCase().includes(query) ||
           l.primaryContact.toLowerCase().includes(query) ||
-          l.linkedInUrl.toLowerCase().includes(query) ||
+          (l.linkedInUrl && l.linkedInUrl.toLowerCase().includes(query)) ||
           l.tags.some((t) => t.toLowerCase().includes(query))
       );
     }
 
     // Status filter
-    if (statusFilter !== 'all') {
-      result = result.filter((l) => l.status === statusFilter);
+    if (statusFilter.length > 0) {
+      result = result.filter((l) => statusFilter.includes(l.status));
     }
 
     // Source filter
-    if (sourceFilter !== 'all') {
-      result = result.filter((l) => l.source === sourceFilter);
+    if (sourceFilter.length > 0) {
+      result = result.filter((l) => sourceFilter.includes(l.source));
     }
 
     // Priority filter
-    if (priorityFilter !== 'all') {
-      result = result.filter((l) => l.priority === priorityFilter);
+    if (priorityFilter.length > 0) {
+      result = result.filter((l) => priorityFilter.includes(l.priority));
     }
 
     // View filter
@@ -86,8 +103,7 @@ export function Dashboard() {
         result = result.filter((l) => isActiveStatus(l.status));
         break;
       case 'closed':
-        result = result.filter((l) => !isActiveStatus(l.status));
-        break;
+        return result.filter((l) => ['Closed', 'Dropped'].includes(l.status));
     }
 
     return result;
@@ -169,37 +185,32 @@ export function Dashboard() {
   return (
     <div className="flex h-screen bg-background flex-col md:flex-row">
       {/* Mobile Header */}
-      <div className="md:hidden border-b bg-background p-4 flex items-center gap-3 sticky top-0 z-20">
-        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="-ml-2">
-              <Menu className="h-6 w-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-72">
-            <LeadSidebar
-              leads={leads}
-              activeView={activeView}
-              onViewChange={setActiveView}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              sourceFilter={sourceFilter}
-              onSourceFilterChange={setSourceFilter}
-              priorityFilter={priorityFilter}
-              onPriorityFilterChange={setPriorityFilter}
-              className="w-full border-r-0"
-              onItemClick={() => setMobileMenuOpen(false)}
-            />
-          </SheetContent>
-        </Sheet>
-        <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="Logo" className="h-8 w-auto" />
-          <div className="flex flex-col">
-            <h1 className="font-semibold text-sm leading-none">Venture Mond</h1>
-            <span className="text-[10px] text-muted-foreground leading-none mt-0.5">Lead Management System</span>
-          </div>
+      <div className="md:hidden border-b bg-background p-4 flex items-center sticky top-0 z-20">
+        <div className="flex items-center gap-3">
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="-ml-2">
+                <Menu className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 w-72">
+              <LeadSidebar
+                leads={leads}
+                activeView={activeView}
+                onViewChange={setActiveView}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                sourceFilter={sourceFilter}
+                onSourceFilterChange={setSourceFilter}
+                priorityFilter={priorityFilter}
+                onPriorityFilterChange={setPriorityFilter}
+                className="w-full border-r-0"
+                onItemClick={() => setMobileMenuOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
 
@@ -223,6 +234,7 @@ export function Dashboard() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">
               {activeView === 'all' && 'Dashboard'}
+              {activeView === 'table' && 'Lead Table'}
               {activeView === 'overdue' && 'Overdue Leads'}
               {activeView === 'today' && "Today's Follow-ups"}
               {activeView === 'active' && 'Active Leads'}
@@ -232,14 +244,42 @@ export function Dashboard() {
               {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''}
             </p>
           </div>
-          <Button onClick={() => setFormOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Lead
-          </Button>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <UserButton />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filter
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <LeadFilters
+                  statusFilter={statusFilter}
+                  onStatusFilterChange={setStatusFilter}
+                  sourceFilter={sourceFilter}
+                  onSourceFilterChange={setSourceFilter}
+                  priorityFilter={priorityFilter}
+                  onPriorityFilterChange={setPriorityFilter}
+                  showLabel={false}
+                />
+              </PopoverContent>
+            </Popover>
+            <Button className="gap-2" onClick={() => {
+              setEditingLead(undefined);
+              setFormOpen(true);
+            }}>
+              <Plus className="h-4 w-4" />
+              Add Lead
+            </Button>
+          </div>
         </header>
 
         <div className="p-6">
-          {activeView === 'all' && groupedLeads ? (
+          {activeView === 'table' ? (
+            <LeadTable leads={filteredLeads} onLeadClick={handleLeadClick} />
+          ) : activeView === 'all' && groupedLeads ? (
             <>
               {renderLeadSection(
                 'Overdue',
@@ -289,11 +329,13 @@ export function Dashboard() {
       <LeadDetail
         lead={selectedLead}
         open={detailOpen}
-        onClose={() => {
-          setDetailOpen(false);
-          setSelectedLead(null);
-        }}
+        onClose={() => setDetailOpen(false)}
         onUpdate={handleUpdateLead}
+        onEdit={() => {
+          setDetailOpen(false);
+          setEditingLead(selectedLead);
+          setFormOpen(true);
+        }}
       />
     </div>
   );

@@ -45,6 +45,13 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [valueEstimate, setValueEstimate] = useState('');
+
+  // New States
+  const [relevantLinks, setRelevantLinks] = useState<string[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]); // Using any for simplicity or define strict type
+  const [followUps, setFollowUps] = useState<{ date: string; note: string }[]>([]);
+  const [meetingNotes, setMeetingNotes] = useState<{ title: string; note: string }[]>([]);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isEditing = !!existingLead;
@@ -55,7 +62,7 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
       setName(existingLead.name);
       setSource(existingLead.source);
       setPrimaryContact(existingLead.primaryContact);
-      setLinkedInUrl(existingLead.linkedInUrl);
+      setLinkedInUrl(existingLead.linkedInUrl || '');
       setStatus(existingLead.status);
       setNextAction(existingLead.nextAction);
       setNextActionDate(existingLead.nextActionDate);
@@ -63,6 +70,11 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
       setPriority(existingLead.priority);
       setTags(existingLead.tags);
       setValueEstimate(existingLead.valueEstimate || '');
+      // Sync new fields
+      setRelevantLinks(existingLead.relevantLinks || []);
+      setDocuments(existingLead.documents || []);
+      setFollowUps(existingLead.followUps || []);
+      setMeetingNotes(existingLead.meetingNotes || []);
     } else {
       resetForm();
     }
@@ -81,6 +93,10 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
     setTags([]);
     setTagInput('');
     setValueEstimate('');
+    setRelevantLinks([]);
+    setDocuments([]);
+    setFollowUps([]);
+    setMeetingNotes([]);
     setErrors({});
   };
 
@@ -95,9 +111,7 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
 
     if (!name.trim()) newErrors.name = 'Name is required';
     if (!primaryContact.trim()) newErrors.primaryContact = 'Primary contact is required';
-    if (!linkedInUrl.trim()) {
-      newErrors.linkedInUrl = 'LinkedIn URL is required';
-    } else if (!validateLinkedInUrl(linkedInUrl)) {
+    if (linkedInUrl.trim() && !validateLinkedInUrl(linkedInUrl)) {
       newErrors.linkedInUrl = 'URL must contain linkedin.com/';
     }
     if (!nextAction.trim()) newErrors.nextAction = 'Next action is required';
@@ -135,10 +149,14 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
       priority,
       tags,
       valueEstimate: valueEstimate.trim() || undefined,
+      relevantLinks: relevantLinks.filter(l => l.trim()),
+      documents,
+      followUps,
+      meetingNotes,
       notes: existingLead?.notes || [],
       createdAt: existingLead?.createdAt || new Date().toISOString(),
-      lastContactedAt: existingLead?.status !== status 
-        ? new Date().toISOString() 
+      lastContactedAt: existingLead?.status !== status
+        ? new Date().toISOString()
         : existingLead?.lastContactedAt || new Date().toISOString(),
     };
 
@@ -147,8 +165,8 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
     onClose();
   };
 
-  const isValid = name.trim() && primaryContact.trim() && linkedInUrl.trim() && 
-    validateLinkedInUrl(linkedInUrl) && nextAction.trim() && nextActionDate;
+  const isValid = name.trim() && primaryContact.trim() &&
+    (!linkedInUrl.trim() || validateLinkedInUrl(linkedInUrl)) && nextAction.trim() && nextActionDate;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -212,7 +230,7 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="linkedInUrl">LinkedIn Profile URL *</Label>
+              <Label htmlFor="linkedInUrl">LinkedIn Profile URL</Label>
               <Input
                 id="linkedInUrl"
                 value={linkedInUrl}
@@ -306,6 +324,183 @@ export function LeadForm({ open, onClose, onSave, existingLead }: LeadFormProps)
               disabled={isLocked}
             />
           </div>
+
+
+          {/* Relevant Links */}
+          <div className="space-y-2">
+            <Label>Relevant Links</Label>
+            {relevantLinks.map((link, index) => (
+              <div key={index} className="flex gap-2">
+                <Input
+                  value={link}
+                  onChange={(e) => {
+                    const newLinks = [...relevantLinks];
+                    newLinks[index] = e.target.value;
+                    setRelevantLinks(newLinks);
+                  }}
+                  placeholder="https://example.com"
+                  disabled={isLocked}
+                />
+                {!isLocked && (
+                  <Button type="button" variant="outline" size="icon" onClick={() => {
+                    setRelevantLinks(relevantLinks.filter((_, i) => i !== index));
+                  }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            {!isLocked && (
+              <Button type="button" variant="outline" size="sm" onClick={() => setRelevantLinks([...relevantLinks, ''])}>
+                <Plus className="h-4 w-4 mr-2" /> Add Link
+              </Button>
+            )}
+          </div>
+
+          {/* Documents */}
+          <div className="space-y-2">
+            <Label>Documents / Attachments</Label>
+            <div className="space-y-2">
+              {documents.map((doc, index) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-md text-sm">
+                  <div className="flex items-center gap-2 truncate">
+                    <span className="font-medium">{doc.filename}</span>
+                    <span className="text-muted-foreground text-xs">({Math.round(doc.size / 1024)} KB)</span>
+                  </div>
+                  {!isLocked && (
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+                      setDocuments(documents.filter((_, i) => i !== index));
+                    }}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {!isLocked && (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="file"
+                  className="cursor-pointer"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    try {
+                      const res = await fetch('http://localhost:5000/api/leads/upload', {
+                        method: 'POST',
+                        body: formData,
+                      });
+                      if (!res.ok) throw new Error('Upload failed');
+                      const data = await res.json();
+                      setDocuments([...documents, data]);
+                      // Clear input
+                      e.target.value = '';
+                    } catch (err) {
+                      console.error(err);
+                      alert('Failed to upload file');
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Follow-up Schedule */}
+          <div className="space-y-2">
+            <Label>Follow-up Schedule</Label>
+            {followUps.map((fu, index) => (
+              <div key={index} className="flex gap-2 items-start">
+                <Input
+                  type="date"
+                  value={fu.date}
+                  onChange={(e) => {
+                    const newFus = [...followUps];
+                    newFus[index] = { ...newFus[index], date: e.target.value };
+                    setFollowUps(newFus);
+                  }}
+                  disabled={isLocked}
+                  className="w-40 shrink-0"
+                />
+                <Input
+                  value={fu.note}
+                  onChange={(e) => {
+                    const newFus = [...followUps];
+                    newFus[index] = { ...newFus[index], note: e.target.value };
+                    setFollowUps(newFus);
+                  }}
+                  placeholder="Note (optional)"
+                  disabled={isLocked}
+                />
+                {!isLocked && (
+                  <Button type="button" variant="outline" size="icon" onClick={() => {
+                    setFollowUps(followUps.filter((_, i) => i !== index));
+                  }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            {!isLocked && (
+              <Button type="button" variant="outline" size="sm" onClick={() => setFollowUps([...followUps, { date: getToday(), note: '' }])}>
+                <Plus className="h-4 w-4 mr-2" /> Add Follow-up
+              </Button>
+            )}
+          </div>
+
+          {/* Meeting Notes */}
+          <div className="space-y-2">
+            <Label>Meeting Notes</Label>
+            {meetingNotes.map((note, index) => (
+              <div key={index} className="space-y-2 p-3 border rounded-md">
+                <div className="flex justify-between items-center">
+                  <Label className="text-xs text-muted-foreground">Meeting {index + 1}</Label>
+                  {!isLocked && (
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+                      setMeetingNotes(meetingNotes.filter((_, i) => i !== index));
+                    }}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <Input
+                  value={note.title}
+                  onChange={(e) => {
+                    const newNotes = [...meetingNotes];
+                    newNotes[index] = { ...newNotes[index], title: e.target.value };
+                    setMeetingNotes(newNotes);
+                  }}
+                  placeholder="Meeting Title"
+                  disabled={isLocked}
+                />
+                <Textarea
+                  value={note.note}
+                  onChange={(e) => {
+                    const newNotes = [...meetingNotes];
+                    newNotes[index] = { ...newNotes[index], note: e.target.value };
+                    setMeetingNotes(newNotes);
+                  }}
+                  placeholder="Notes..."
+                  disabled={isLocked}
+                  rows={2}
+                />
+              </div>
+            ))}
+            {!isLocked && (
+              <Button type="button" variant="outline" size="sm" onClick={() => setMeetingNotes([...meetingNotes, { title: `Meeting ${meetingNotes.length + 1}`, note: '' }])}>
+                <Plus className="h-4 w-4 mr-2" /> Add Meeting
+              </Button>
+            )}
+          </div>
+
+          {/* Context Note (Legacy/Hidden if empty and has meeting notes?) - Keeping purely for compatibility, maybe move to bottom or keep visible if data exists. User said REPLACE. I'll hide it if I can but I must support it. I'll just remove the UI element but keep data persistence in submit. */}
+          {/* <div className="space-y-2">
+            <Label htmlFor="contextNote">Context Note</Label> ... 
+            I am removing the UI as requested.
+          </div> */}
 
           <div className="space-y-2">
             <Label>Tags</Label>

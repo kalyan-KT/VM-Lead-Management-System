@@ -17,9 +17,11 @@ import {
   Users,
   CheckCircle,
   LayoutDashboard,
-  X
+  X,
+  Table
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LeadFilters } from './LeadFilters';
 
 interface LeadSidebarProps {
   leads: Lead[];
@@ -27,12 +29,12 @@ interface LeadSidebarProps {
   onViewChange: (view: ViewFilter) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  statusFilter: LeadStatus | 'all';
-  onStatusFilterChange: (status: LeadStatus | 'all') => void;
-  sourceFilter: LeadSource | 'all';
-  onSourceFilterChange: (source: LeadSource | 'all') => void;
-  priorityFilter: LeadPriority | 'all';
-  onPriorityFilterChange: (priority: LeadPriority | 'all') => void;
+  statusFilter: string[];
+  onStatusFilterChange: (status: string[]) => void;
+  sourceFilter: string[];
+  onSourceFilterChange: (source: string[]) => void;
+  priorityFilter: string[];
+  onPriorityFilterChange: (priority: string[]) => void;
   className?: string;
   onItemClick?: () => void;
 }
@@ -64,16 +66,17 @@ export function LeadSidebar({
     closed: leads.filter(l => !isActiveStatus(l.status)).length,
   };
 
-  const hasFilters = statusFilter !== 'all' || sourceFilter !== 'all' || priorityFilter !== 'all';
+  const hasFilters = statusFilter.length > 0 || sourceFilter.length > 0 || priorityFilter.length > 0;
 
   const clearFilters = () => {
-    onStatusFilterChange('all');
-    onSourceFilterChange('all');
-    onPriorityFilterChange('all');
+    onStatusFilterChange([]);
+    onSourceFilterChange([]);
+    onPriorityFilterChange([]);
   };
 
   const navItems = [
     { id: 'all' as ViewFilter, label: 'Dashboard', icon: LayoutDashboard, count: counts.all },
+    { id: 'table' as ViewFilter, label: 'Table View', icon: Table, count: counts.all },
     { id: 'overdue' as ViewFilter, label: 'Overdue', icon: AlertCircle, count: counts.overdue, danger: true },
     { id: 'today' as ViewFilter, label: "Today's Follow-ups", icon: Flame, count: counts.today, warning: true },
     { id: 'active' as ViewFilter, label: 'Active Leads', icon: Users, count: counts.active },
@@ -139,56 +142,8 @@ export function LeadSidebar({
         ))}
       </nav>
 
-      {/* Filters */}
-      <div className="p-4 border-t border-sidebar-border space-y-3">
-        <div className="flex items-center justify-between">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase">Filters</Label>
-          {hasFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-6 px-2 text-xs">
-              <X className="h-3 w-3 mr-1" />
-              Clear
-            </Button>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Select value={statusFilter} onValueChange={(v) => onStatusFilterChange(v as LeadStatus | 'all')}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              {STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={sourceFilter} onValueChange={(v) => onSourceFilterChange(v as LeadSource | 'all')}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Source" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sources</SelectItem>
-              {SOURCES.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={priorityFilter} onValueChange={(v) => onPriorityFilterChange(v as LeadPriority | 'all')}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priorities</SelectItem>
-              {PRIORITIES.map((p) => (
-                <SelectItem key={p} value={p}>{p}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      {/* Filters removed */}
+      <div className="p-4 border-t border-sidebar-border" />
     </aside>
   );
 }
