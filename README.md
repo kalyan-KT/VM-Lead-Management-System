@@ -19,6 +19,14 @@ A comprehensive Lead Management System designed to ensure zero-miss follow-ups. 
 - **Node.js**: v18 or higher is recommended.
 - **MongoDB Atlas Account**: You need a running MongoDB cluster or a valid connection string.
 
+## Authentication
+
+This project uses **Clerk** for secure user authentication.
+
+- **Login-Only Application**: The dashboard and all lead data are protected. Users must log in to access the app.
+- **No Signups**: The login page does not allow self-registration by default.
+- **Configuration**: You must provide the `VITE_CLERK_PUBLISHABLE_KEY` in your Frontend `.env` file for the login flow to work.
+
 ---
 
 ## 1. Backend Setup & Run
