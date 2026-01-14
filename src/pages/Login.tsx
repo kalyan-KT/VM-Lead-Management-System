@@ -115,11 +115,11 @@ const Login = () => {
                     <form onSubmit={handleLogin} className="w-full space-y-6">
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="email" className="text-gray-700 font-normal text-base">Email</Label>
+                                <Label htmlFor="email" className="text-gray-700 font-normal text-base">Email or Username</Label>
                                 <Input
                                     id="email"
-                                    type="email"
-                                    placeholder="you@example.com"
+                                    type="text"
+                                    placeholder="Enter email or username"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="h-12 px-4 bg-gray-50/50 border-gray-200 focus-visible:ring-blue-600"
