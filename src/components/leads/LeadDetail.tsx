@@ -19,6 +19,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import {
   Calendar,
@@ -32,7 +38,8 @@ import {
   ExternalLink,
   Download,
   Trash2,
-  Eye
+  Eye,
+  FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -55,6 +62,9 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete }: 
   const [status, setStatus] = useState<LeadStatus>('New');
   const [priority, setPriority] = useState<LeadPriority>('Medium');
   const [dateError, setDateError] = useState('');
+
+  // File Preview State
+  const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
 
   // Sync local state when lead changes
   useState(() => {
@@ -139,322 +149,396 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete }: 
 
   const isContactEmail = lead.primaryContact.includes('@');
 
+  const handlePreview = (doc: { path: string }) => {
+    const filename = doc.path.split(/[/\\]/).pop() || 'document';
+    const url = `/api/leads/files/${filename}`;
+    const ext = filename.split('.').pop()?.toLowerCase();
+
+    let type = 'unknown';
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '')) type = 'image';
+    else if (ext === 'pdf') type = 'pdf';
+    else if (['txt', 'md', 'json', 'csv'].includes(ext || '')) type = 'text';
+
+    setPreviewFile({ url, name: filename, type });
+  };
+
   return (
-    <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-        <SheetHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-xl font-semibold flex items-center gap-3">
-              {lead.name}
-              <Badge className={cn('text-xs', getStatusColor(lead.status))}>
-                {lead.status}
-              </Badge>
-            </SheetTitle>
-            {!isLocked && (
-              <Button variant="outline" size="sm" onClick={onEdit}>
-                Edit
-              </Button>
-            )}
-          </div>
-        </SheetHeader>
-
-        {isLocked && (
-          <div className="flex items-center gap-2 p-3 bg-muted rounded-lg text-sm text-muted-foreground mb-4">
-            <AlertCircle className="h-4 w-4" />
-            This lead is {lead.status.toLowerCase()} and cannot be edited.
-          </div>
-        )}
-
-        {/* Lead Summary */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-2 text-sm">
-              {isContactEmail ? (
-                <Mail className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <Phone className="h-4 w-4 text-muted-foreground" />
-              )}
-              <span className="truncate">{lead.primaryContact}</span>
-            </div>
-            {lead.linkedInUrl && (
-              <div className="flex items-center gap-2 text-sm">
-                <Link2 className="h-4 w-4 text-muted-foreground" />
-                <a
-                  href={`https://${lead.linkedInUrl}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline truncate flex items-center gap-1"
-                >
-                  {lead.linkedInUrl}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            )}
-            <div className="flex items-center gap-2 text-sm">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span>Created: {new Date(lead.createdAt).toLocaleDateString()}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span>Last contact: {new Date(lead.lastContactedAt).toLocaleDateString()}</span>
-            </div>
-          </div>
-
-          {lead.contextNote && (
-            <div className="p-4 bg-secondary/50 rounded-lg">
-              <p className="text-sm text-muted-foreground font-medium mb-1">Context</p>
-              <p className="text-sm">{lead.contextNote}</p>
-            </div>
-          )}
-
-          {lead.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {lead.tags.map((tag) => (
-                <Badge key={tag} variant="outline" className="text-xs">
-                  {tag}
+    <>
+      <Sheet open={open} onOpenChange={onClose}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="text-xl font-semibold flex items-center gap-3">
+                {lead.name}
+                <Badge className={cn('text-xs', getStatusColor(lead.status))}>
+                  {lead.status}
                 </Badge>
-              ))}
+              </SheetTitle>
+              {!isLocked && (
+                <Button variant="outline" size="sm" onClick={onEdit}>
+                  Edit
+                </Button>
+              )}
+            </div>
+          </SheetHeader>
+
+          {isLocked && (
+            <div className="flex items-center gap-2 p-3 bg-muted rounded-lg text-sm text-muted-foreground mb-4">
+              <AlertCircle className="h-4 w-4" />
+              This lead is {lead.status.toLowerCase()} and cannot be edited.
             </div>
           )}
 
-          {lead.valueEstimate && (
-            <div className="text-sm">
-              <span className="text-muted-foreground">Value Estimate:</span>{' '}
-              <span className="font-medium">{lead.valueEstimate}</span>
-            </div>
-          )}
-
-          {/* Relevant Links */}
-          {lead.relevantLinks && lead.relevantLinks.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Relevant Links</p>
-              <div className="flex flex-col gap-1">
-                {lead.relevantLinks.map((link, i) => (
-                  <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                    <Link2 className="h-3 w-3" /> {link} <ExternalLink className="h-3 w-3" />
+          {/* Lead Summary */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2 text-sm">
+                {isContactEmail ? (
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span className="truncate">{lead.primaryContact}</span>
+              </div>
+              {lead.linkedInUrl && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Link2 className="h-4 w-4 text-muted-foreground" />
+                  <a
+                    href={`https://${lead.linkedInUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline truncate flex items-center gap-1"
+                  >
+                    {lead.linkedInUrl}
+                    <ExternalLink className="h-3 w-3" />
                   </a>
-                ))}
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span>Created: {new Date(lead.createdAt).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span>Last contact: {new Date(lead.lastContactedAt).toLocaleDateString()}</span>
               </div>
             </div>
-          )}
 
-          {/* Documents */}
-          {lead.documents && lead.documents.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Documents</p>
+            {lead.contextNote && (
+              <div className="p-4 bg-secondary/50 rounded-lg">
+                <p className="text-sm text-muted-foreground font-medium mb-1">Context</p>
+                <p className="text-sm">{lead.contextNote}</p>
+              </div>
+            )}
+
+            {lead.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {lead.tags.map((tag) => (
+                  <Badge key={tag} variant="outline" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {lead.valueEstimate && (
+              <div className="text-sm">
+                <span className="text-muted-foreground">Value Estimate:</span>{' '}
+                <span className="font-medium">{lead.valueEstimate}</span>
+              </div>
+            )}
+
+            {/* Relevant Links */}
+            {lead.relevantLinks && lead.relevantLinks.length > 0 && (
               <div className="space-y-1">
-                {lead.documents.map((doc, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm p-2 bg-muted/30 rounded-md">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <span className="font-medium truncate max-w-[150px]" title={doc.filename}>{doc.filename}</span>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">({Math.round(doc.size / 1024)} KB)</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-primary"
-                        onClick={() => {
-                          const filename = doc.path.split(/[/\\]/).pop();
-                          const url = `/api/leads/files/${filename}`;
-                          window.open(url, '_blank');
-                        }}
-                        title="View"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-primary"
-                        onClick={() => {
-                          const filename = doc.path.split(/[/\\]/).pop();
-                          const url = `/api/leads/files/${filename}`;
-                          const link = document.createElement('a');
-                          link.href = url;
-                          link.download = filename || 'document';
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                        }}
-                        title="Download"
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                <p className="text-sm font-medium text-muted-foreground">Relevant Links</p>
+                <div className="flex flex-col gap-1">
+                  {lead.relevantLinks.map((link, i) => (
+                    <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                      <Link2 className="h-3 w-3" /> {link} <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Follow-ups */}
-          {lead.followUps && lead.followUps.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Follow-up Schedule</p>
-              <div className="space-y-1 border-l-2 pl-2">
-                {lead.followUps.map((fu, i) => (
-                  <div key={i} className="text-sm">
-                    <span className="font-semibold">{fu.date}:</span> {fu.note}
-                  </div>
-                ))}
+            {/* Documents */}
+            {lead.documents && lead.documents.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Documents</p>
+                <div className="space-y-1">
+                  {lead.documents.map((doc, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm p-2 bg-muted/30 rounded-md">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <span className="font-medium truncate max-w-[150px]" title={doc.filename}>{doc.filename}</span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">({Math.round(doc.size / 1024)} KB)</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          onClick={() => handlePreview(doc)}
+                          title="View"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          onClick={() => {
+                            const filename = doc.path.split(/[/\\]/).pop();
+                            const url = `/api/leads/files/${filename}`;
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = filename || 'document';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }}
+                          title="Download"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Meeting Notes */}
-          {lead.meetingNotes && lead.meetingNotes.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Meeting Notes</p>
+            {/* Follow-ups */}
+            {lead.followUps && lead.followUps.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Follow-up Schedule</p>
+                <div className="space-y-1 border-l-2 pl-2">
+                  {lead.followUps.map((fu, i) => (
+                    <div key={i} className="text-sm">
+                      <span className="font-semibold">{fu.date}:</span> {fu.note}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Meeting Notes */}
+            {lead.meetingNotes && lead.meetingNotes.length > 0 && (
               <div className="space-y-2">
-                {lead.meetingNotes.map((note, i) => (
-                  <div key={i} className="bg-muted/30 p-2 rounded">
-                    <div className="font-medium text-sm">{note.title}</div>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{note.note}</p>
-                  </div>
-                ))}
+                <p className="text-sm font-medium text-muted-foreground">Meeting Notes</p>
+                <div className="space-y-2">
+                  {lead.meetingNotes.map((note, i) => (
+                    <div key={i} className="bg-muted/30 p-2 rounded">
+                      <div className="font-medium text-sm">{note.title}</div>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{note.note}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Separator className="my-6" />
+
+          {/* Status & Next Action Editor */}
+          <div className="space-y-4">
+            <h3 className="font-semibold flex items-center gap-2">
+              <ArrowRight className="h-4 w-4" />
+              Next Action
+            </h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select
+                  value={status}
+                  onValueChange={(v) => validateAndUpdateStatus(v as LeadStatus)}
+                  disabled={isLocked}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select
+                  value={priority}
+                  onValueChange={(v) => setPriority(v as LeadPriority)}
+                  disabled={isLocked}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRIORITIES.map((p) => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          )}
-        </div>
 
-        <Separator className="my-6" />
-
-        {/* Status & Next Action Editor */}
-        <div className="space-y-4">
-          <h3 className="font-semibold flex items-center gap-2">
-            <ArrowRight className="h-4 w-4" />
-            Next Action
-          </h3>
-
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Status</Label>
-              <Select
-                value={status}
-                onValueChange={(v) => validateAndUpdateStatus(v as LeadStatus)}
+              <Label>Action</Label>
+              <Input
+                value={nextAction}
+                onChange={(e) => setNextAction(e.target.value)}
+                placeholder="What needs to be done?"
                 disabled={isLocked}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Priority</Label>
-              <Select
-                value={priority}
-                onValueChange={(v) => setPriority(v as LeadPriority)}
-                disabled={isLocked}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRIORITIES.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Action</Label>
-            <Input
-              value={nextAction}
-              onChange={(e) => setNextAction(e.target.value)}
-              placeholder="What needs to be done?"
-              disabled={isLocked}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Date</Label>
-            <Input
-              type="date"
-              value={nextActionDate}
-              onChange={(e) => setNextActionDate(e.target.value)}
-              disabled={isLocked}
-              className={dateError ? 'border-destructive' : ''}
-            />
-            {dateError && <p className="text-xs text-destructive">{dateError}</p>}
-          </div>
-
-          {!isLocked && (
-            <Button onClick={handleSaveFollowUp} className="w-full">
-              Save Changes
-            </Button>
-          )}
-        </div>
-
-        <Separator className="my-6" />
-
-        {/* Conversation Notes */}
-        <div className="space-y-4">
-          <h3 className="font-semibold">Conversation Notes</h3>
-
-          {!isLocked && (
-            <div className="space-y-2">
-              <Textarea
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                placeholder="Add a note..."
-                rows={3}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={nextActionDate}
+                onChange={(e) => setNextActionDate(e.target.value)}
+                disabled={isLocked}
+                className={dateError ? 'border-destructive' : ''}
+              />
+              {dateError && <p className="text-xs text-destructive">{dateError}</p>}
+            </div>
+
+            {!isLocked && (
+              <Button onClick={handleSaveFollowUp} className="w-full">
+                Save Changes
+              </Button>
+            )}
+          </div>
+
+          <Separator className="my-6" />
+
+          {/* Conversation Notes */}
+          <div className="space-y-4">
+            <h3 className="font-semibold">Conversation Notes</h3>
+
+            {!isLocked && (
+              <div className="space-y-2">
+                <Textarea
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  placeholder="Add a note..."
+                  rows={3}
+                />
+                <Button
+                  onClick={handleAddNote}
+                  size="sm"
+                  disabled={!newNote.trim()}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Note
+                </Button>
+              </div>
+            )}
+
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {lead.notes.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No notes yet
+                </p>
+              ) : (
+                [...lead.notes].reverse().map((note) => (
+                  <div key={note.id} className="p-3 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      {new Date(note.createdAt).toLocaleString()}
+                    </p>
+                    <p className="text-sm">• {note.content}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {!isLocked && (
+            <div className="pt-6 mt-6 border-t">
               <Button
-                onClick={handleAddNote}
-                size="sm"
-                disabled={!newNote.trim()}
-                className="gap-2"
+                variant="destructive"
+                className="w-full gap-2"
+                onClick={() => {
+                  if (confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
+                    onDelete(lead.id);
+                  }
+                }}
               >
-                <Plus className="h-4 w-4" />
-                Add Note
+                <Trash2 className="h-4 w-4" />
+                Delete Lead
               </Button>
             </div>
           )}
+        </SheetContent>
+      </Sheet>
 
-          <div className="space-y-3 max-h-64 overflow-y-auto">
-            {lead.notes.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No notes yet
-              </p>
-            ) : (
-              [...lead.notes].reverse().map((note) => (
-                <div key={note.id} className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-xs text-muted-foreground mb-1">
-                    {new Date(note.createdAt).toLocaleString()}
-                  </p>
-                  <p className="text-sm">• {note.content}</p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {!isLocked && (
-          <div className="pt-6 mt-6 border-t">
+      {/* File Preview Dialog */}
+      <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden h-[90vh] flex flex-col">
+          <DialogHeader className="p-4 border-b bg-gray-50 flex flex-row items-center justify-between">
+            <DialogTitle className="text-base truncate max-w-[80%]">
+              {previewFile?.name}
+            </DialogTitle>
             <Button
-              variant="destructive"
-              className="w-full gap-2"
+              variant="outline"
+              size="sm"
+              className="gap-2 ml-4"
               onClick={() => {
-                if (confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
-                  onDelete(lead.id);
-                }
+                if (!previewFile) return;
+                const link = document.createElement('a');
+                link.href = previewFile.url;
+                link.download = previewFile.name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
               }}
             >
-              <Trash2 className="h-4 w-4" />
-              Delete Lead
+              <Download className="h-4 w-4" />
+              Download
             </Button>
+          </DialogHeader>
+          <div className="flex-1 bg-gray-100 p-4 flex items-center justify-center overflow-auto">
+            {previewFile?.type === 'image' ? (
+              <img
+                src={previewFile.url}
+                alt={previewFile.name}
+                className="max-w-full max-h-full object-contain shadow-lg"
+              />
+            ) : previewFile?.type === 'pdf' ? (
+              <iframe
+                src={`${previewFile.url}#toolbar=0`}
+                className="w-full h-full rounded-md shadow bg-white"
+                title={previewFile.name}
+              />
+            ) : previewFile?.type === 'text' ? (
+              <iframe
+                src={previewFile.url}
+                className="w-full h-full rounded-md shadow bg-white"
+                title={previewFile.name}
+              />
+            ) : (
+              <div className="text-center">
+                <div className="h-16 w-16 bg-gray-200 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <FileText className="h-8 w-8 text-gray-400" />
+                </div>
+                <p className="text-gray-900 font-medium">Preview not available for this file type</p>
+                <p className="text-sm text-gray-500 mb-4">{previewFile?.name}</p>
+                <Button onClick={() => {
+                  if (!previewFile) return;
+                  window.open(previewFile.url, '_blank');
+                }}>
+                  Open in New Tab
+                </Button>
+              </div>
+            )}
           </div>
-        )}
-      </SheetContent>
-    </Sheet>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
