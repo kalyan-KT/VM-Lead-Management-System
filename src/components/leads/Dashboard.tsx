@@ -14,7 +14,7 @@ import { Plus, AlertCircle, Flame, Clock, Menu, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LeadFilters } from './LeadFilters';
-import { UserButton } from "@clerk/clerk-react";
+import { ProfileDialog } from '@/components/ProfileDialog';
 
 export function Dashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -276,13 +276,7 @@ export function Dashboard() {
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <UserButton
-              appearance={{
-                elements: {
-                  userButtonPopoverFooter: "hidden"
-                }
-              }}
-            />
+            <ProfileDialog />
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="gap-2">
