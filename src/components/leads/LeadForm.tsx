@@ -395,7 +395,7 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
                     formData.append('file', file);
 
                     try {
-                      const res = await fetch('http://localhost:5000/api/leads/upload', {
+                      const res = await fetch('/api/leads/upload', {
                         method: 'POST',
                         body: formData,
                       });

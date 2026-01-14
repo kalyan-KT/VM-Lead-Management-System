@@ -252,7 +252,7 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit }: LeadDetail
                       className="h-6 w-6 ml-2 hover:text-primary"
                       onClick={() => {
                         const filename = doc.path.split(/[/\\]/).pop();
-                        const url = `http://localhost:5000/api/leads/files/${filename}`;
+                        const url = `/api/leads/files/${filename}`;
                         window.open(url, '_blank');
                       }}
                       title="Download"
