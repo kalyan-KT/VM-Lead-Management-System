@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Eye, EyeOff } from "lucide-react";
 
 type ViewState = "login" | "forgot" | "reset";
 
@@ -11,6 +12,7 @@ const Login = () => {
     const [view, setView] = useState<ViewState>("login");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [code, setCode] = useState("");
     const [error, setError] = useState("");
 
@@ -30,6 +32,12 @@ const Login = () => {
                 await setActive({ session: result.createdSessionId });
             } else {
                 console.log(result);
+                // Handle incomplete sign-in (e.g. 2FA) if needed
+                if (result.status === "needs_first_factor") {
+                    setError("Username requires email verification. Please check your email settings.");
+                } else {
+                    setError("Login failed. Please check your credentials.");
+                }
             }
         } catch (err: any) {
             console.error("error", err.errors[0].longMessage);
@@ -140,15 +148,29 @@ const Login = () => {
                                         Forgot password?
                                     </button>
                                 </div>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    placeholder="••••••••"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="h-12 px-4 bg-gray-50/50 border-gray-200 focus-visible:ring-blue-600 focus-visible:border-blue-600"
-                                    required
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        placeholder="••••••••"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="h-12 px-4 pr-10 bg-gray-50/50 border-gray-200 focus-visible:ring-blue-600"
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                                        tabIndex={-1}
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="h-5 w-5" />
+                                        ) : (
+                                            <Eye className="h-5 w-5" />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <Button type="submit" className="w-full h-12 text-base font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all">
@@ -209,16 +231,30 @@ const Login = () => {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="new-password" className="text-gray-700 font-normal text-base">New Password</Label>
-                                <Input
-                                    id="new-password"
-                                    type="password"
-                                    placeholder="Enter new password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="h-12 px-4 bg-gray-50/50 border-gray-200 focus-visible:ring-blue-600"
-                                    required
-                                    minLength={8}
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="new-password"
+                                        type={showPassword ? "text" : "password"}
+                                        placeholder="Enter new password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="h-12 px-4 pr-10 bg-gray-50/50 border-gray-200 focus-visible:ring-blue-600"
+                                        required
+                                        minLength={8}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                                        tabIndex={-1}
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="h-5 w-5" />
+                                        ) : (
+                                            <Eye className="h-5 w-5" />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div className="flex flex-col gap-3">
