@@ -158,3 +158,35 @@
     @apply flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-3;
   }
 }
+
+/* 
+  Force Hide Clerk Branding and Development Badge
+  Using specific class IDs and names found in Clerk's DOM
+*/
+
+/* Hide "Secured by Clerk" footer */
+.cl-footer {
+  display: none !important;
+}
+
+/* Hide development badge */
+.cl-badge {
+  display: none !important;
+}
+
+/* Hide "+ Add email address" button */
+/* Targeting by button content is tricky in CSS, but targeting the primary button in profile section often works */
+.cl-profileSectionPrimaryButton {
+  display: none !important;
+}
+
+/* Safety net for other badge types */
+div[class*="cl-badge"], 
+span[class*="cl-badge"] {
+    display: none !important;
+}
+
+/* Hide bottom footer in modal if specific class is used */
+.cl-userProfile-footer {
+    display: none !important;
+}
