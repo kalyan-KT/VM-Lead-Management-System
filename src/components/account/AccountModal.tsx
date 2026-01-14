@@ -176,7 +176,7 @@ export function AccountModal() {
                                                 <p className="text-sm text-gray-500">Your password is set and secure</p>
                                             </div>
                                         </div>
-                                        <Button variant="outline" size="sm" disabled>Change</Button>
+
                                     </div>
                                 </div>
 
