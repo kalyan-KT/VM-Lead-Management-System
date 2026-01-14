@@ -31,7 +31,8 @@ import {
   AlertCircle,
   ExternalLink,
   Download,
-  Trash2
+  Trash2,
+  Eye
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -248,19 +249,39 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete }: 
                       <span className="font-medium truncate max-w-[150px]" title={doc.filename}>{doc.filename}</span>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">({Math.round(doc.size / 1024)} KB)</span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 ml-2 hover:text-primary"
-                      onClick={() => {
-                        const filename = doc.path.split(/[/\\]/).pop();
-                        const url = `/api/leads/files/${filename}`;
-                        window.open(url, '_blank');
-                      }}
-                      title="Download"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        onClick={() => {
+                          const filename = doc.path.split(/[/\\]/).pop();
+                          const url = `/api/leads/files/${filename}`;
+                          window.open(url, '_blank');
+                        }}
+                        title="View"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        onClick={() => {
+                          const filename = doc.path.split(/[/\\]/).pop();
+                          const url = `/api/leads/files/${filename}`;
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = filename || 'document';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                        title="Download"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
