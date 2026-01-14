@@ -30,7 +30,8 @@ import {
   Clock,
   AlertCircle,
   ExternalLink,
-  Download
+  Download,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -40,12 +41,13 @@ interface LeadDetailProps {
   onClose: () => void;
   onUpdate: (lead: Lead) => void;
   onEdit: () => void;
+  onDelete: (id: string) => void;
 }
 
 const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Follow-up', 'Closed', 'Dropped'];
 const PRIORITIES: LeadPriority[] = ['High', 'Medium', 'Low'];
 
-export function LeadDetail({ lead, open, onClose, onUpdate, onEdit }: LeadDetailProps) {
+export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete }: LeadDetailProps) {
   const [newNote, setNewNote] = useState('');
   const [nextAction, setNextAction] = useState('');
   const [nextActionDate, setNextActionDate] = useState('');
@@ -414,6 +416,23 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit }: LeadDetail
             )}
           </div>
         </div>
+
+        {!isLocked && (
+          <div className="pt-6 mt-6 border-t">
+            <Button
+              variant="destructive"
+              className="w-full gap-2"
+              onClick={() => {
+                if (confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
+                  onDelete(lead.id);
+                }
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Lead
+            </Button>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );

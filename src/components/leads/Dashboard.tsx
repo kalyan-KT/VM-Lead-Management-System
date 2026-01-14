@@ -187,7 +187,6 @@ export function Dashboard() {
               key={lead.id}
               lead={lead}
               onClick={() => handleLeadClick(lead)}
-              onDelete={() => handleDeleteLead(lead.id)}
             />
           ))}
         </div>
@@ -207,7 +206,6 @@ export function Dashboard() {
             key={lead.id}
             lead={lead}
             onClick={() => handleLeadClick(lead)}
-            onDelete={() => handleDeleteLead(lead.id)}
           />
         ))
       )}
@@ -372,6 +370,7 @@ export function Dashboard() {
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
         onUpdate={handleUpdateLead}
+        onDelete={handleDeleteLead}
         onEdit={() => {
           setDetailOpen(false);
           setEditingLead(selectedLead);
