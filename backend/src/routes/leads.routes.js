@@ -9,6 +9,7 @@ const {
     updateLead,
     addNote,
     archiveLead,
+    deleteLead,
 } = require('../controllers/leads.controller');
 
 const routes = express.Router();
@@ -58,7 +59,7 @@ routes.get('/files/:filename', (req, res) => {
 });
 
 routes.route('/').get(getLeads).post(createLead);
-routes.route('/:id').get(getLead).put(updateLead);
+routes.route('/:id').get(getLead).put(updateLead).delete(deleteLead);
 routes.route('/:id/notes').post(addNote);
 routes.route('/:id/archive').patch(archiveLead);
 

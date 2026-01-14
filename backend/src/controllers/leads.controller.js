@@ -103,3 +103,20 @@ exports.archiveLead = async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 };
+
+// @desc    Delete lead
+// @route   DELETE /api/leads/:id
+// @access  Public
+exports.deleteLead = async (req, res) => {
+    try {
+        const lead = await Lead.findByIdAndDelete(req.params.id);
+
+        if (!lead) {
+            return res.status(404).json({ message: 'Lead not found' });
+        }
+
+        res.status(200).json({ message: 'Lead deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
