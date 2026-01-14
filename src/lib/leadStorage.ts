@@ -1,6 +1,6 @@
 import { Lead, LeadStatus, ConversationNote } from '@/types/lead';
 
-const API_URL = 'http://localhost:5000/api/leads';
+const API_URL = '/api/leads';
 
 export const generateId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
