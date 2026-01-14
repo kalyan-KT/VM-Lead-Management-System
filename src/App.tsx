@@ -25,11 +25,16 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Public Login Route */}
+            {/* Public Login Route - Redirects to / if already logged in */}
             <Route path="/login" element={
-              <SignedOut>
-                <Login />
-              </SignedOut>
+              <>
+                <SignedIn>
+                  <Navigate to="/" replace />
+                </SignedIn>
+                <SignedOut>
+                  <Login />
+                </SignedOut>
+              </>
             } />
 
             {/* Protected Index Route */}
