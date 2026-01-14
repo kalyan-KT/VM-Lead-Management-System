@@ -33,3 +33,5 @@ backend/uploads/*
 
 # Sensitive Documentation
 AWS_DEPLOYMENT_GUIDE.md
+AWS_DEPLOYMENT_GUIDE_V2.md
+AMAZON_LINUX_DEPLOYMENT.md
