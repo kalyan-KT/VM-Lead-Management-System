@@ -50,18 +50,34 @@ export function Dashboard() {
   };
 
   const handleDeleteLead = async (id: string) => {
+    if (!id) return;
     try {
-      const success = await deleteLead(id);
-      if (success) {
-        const data = await getLeads();
-        setLeads(data);
-        if (selectedLead?.id === id) {
-          setDetailOpen(false);
-          setSelectedLead(null);
-        }
+      await deleteLead(id);
+      // Success path
+      const data = await getLeads();
+      setLeads(data);
+      if (selectedLead?.id === id) {
+        setDetailOpen(false);
+        setSelectedLead(null);
       }
     } catch (error) {
       console.error('Failed to delete lead:', error);
+      // Even if delete failed (e.g. 404 not found), refresh the list to remove ghost items
+      try {
+        const data = await getLeads();
+        setLeads(data);
+        // If the lead is gone from the server, verify and close detail
+        if (!data.find(l => l.id === id)) {
+          if (selectedLead?.id === id) {
+            setDetailOpen(false);
+            setSelectedLead(null);
+          }
+        } else {
+          alert('Failed to delete lead. Please try again.');
+        }
+      } catch (wsError) {
+        console.error("Failed to refresh leads", wsError);
+      }
     }
   };
 
@@ -71,10 +87,16 @@ export function Dashboard() {
   };
 
   const handleUpdateLead = async (lead: Lead) => {
-    await saveLead(lead);
-    const data = await getLeads();
-    setLeads(data);
-    setSelectedLead(lead);
+    try {
+      const updatedLead = await saveLead(lead);
+      const data = await getLeads();
+      setLeads(data);
+      // Update selected lead to match the FRESH data from server/utils
+      setSelectedLead(updatedLead);
+    } catch (error) {
+      console.error("Failed to update lead", error);
+      alert("Failed to update lead changes.");
+    }
   };
 
   // Derived state
