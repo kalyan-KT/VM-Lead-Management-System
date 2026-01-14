@@ -114,3 +114,16 @@ export const addNote = async (leadId: string, content: string): Promise<Conversa
     return null;
   }
 };
+
+export const deleteLead = async (id: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete lead');
+    return true;
+  } catch (error) {
+    console.error('Error deleting lead:', error);
+    return false;
+  }
+};

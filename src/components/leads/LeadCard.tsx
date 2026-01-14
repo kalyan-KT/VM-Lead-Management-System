@@ -1,15 +1,17 @@
 import { Lead } from '@/types/lead';
 import { isOverdue, isToday, isLockedStatus } from '@/lib/leadStorage';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, User, LinkIcon, ArrowRight } from 'lucide-react';
+import { Calendar, User, LinkIcon, ArrowRight, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface LeadCardProps {
   lead: Lead;
   onClick: () => void;
+  onDelete: () => void;
 }
 
-export function LeadCard({ lead, onClick }: LeadCardProps) {
+export function LeadCard({ lead, onClick, onDelete }: LeadCardProps) {
   const overdue = isOverdue(lead.nextActionDate) && !isLockedStatus(lead.status);
   const today = isToday(lead.nextActionDate) && !isLockedStatus(lead.status);
 
@@ -87,8 +89,21 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
           </div>
         </div>
 
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-          <ArrowRight className="h-5 w-5 text-muted-foreground" />
+        <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ArrowRight className="h-5 w-5 text-muted-foreground self-end" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm('Are you sure you want to delete this lead?')) {
+                onDelete();
+              }
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 

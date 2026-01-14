@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Lead, ViewFilter, LeadSource, LeadStatus, LeadPriority } from '@/types/lead';
-import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus } from '@/lib/leadStorage';
+import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead } from '@/lib/leadStorage';
 import { LeadCard } from './LeadCard';
 import { LeadTable } from './LeadTable';
 import { LeadForm } from './LeadForm';
@@ -46,6 +46,22 @@ export function Dashboard() {
     } catch (error) {
       console.error('Failed to save lead:', error);
       alert('Failed to save lead. Please check the console for details.');
+    }
+  };
+
+  const handleDeleteLead = async (id: string) => {
+    try {
+      const success = await deleteLead(id);
+      if (success) {
+        const data = await getLeads();
+        setLeads(data);
+        if (selectedLead?.id === id) {
+          setDetailOpen(false);
+          setSelectedLead(null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete lead:', error);
     }
   };
 
@@ -167,7 +183,12 @@ export function Dashboard() {
         </div>
         <div className="grid gap-3">
           {leads.map((lead) => (
-            <LeadCard key={lead.id} lead={lead} onClick={() => handleLeadClick(lead)} />
+            <LeadCard
+              key={lead.id}
+              lead={lead}
+              onClick={() => handleLeadClick(lead)}
+              onDelete={() => handleDeleteLead(lead.id)}
+            />
           ))}
         </div>
       </div>
@@ -182,7 +203,12 @@ export function Dashboard() {
         </div>
       ) : (
         filteredLeads.map((lead) => (
-          <LeadCard key={lead.id} lead={lead} onClick={() => handleLeadClick(lead)} />
+          <LeadCard
+            key={lead.id}
+            lead={lead}
+            onClick={() => handleLeadClick(lead)}
+            onDelete={() => handleDeleteLead(lead.id)}
+          />
         ))
       )}
     </div>
