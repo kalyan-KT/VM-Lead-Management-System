@@ -252,22 +252,30 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
               {errors.primaryContact && <p className="text-xs text-destructive">{errors.primaryContact}</p>}
             </div>
 
-            {source === 'LinkedIn' && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="linkedInUrl">LinkedIn Profile URL</Label>
-                  <Input
-                    id="linkedInUrl"
-                    value={linkedInUrl}
-                    onChange={(e) => setLinkedInUrl(e.target.value)}
-                    placeholder="linkedin.com/in/username"
-                    disabled={isLocked}
-                    className={errors.linkedInUrl ? 'border-destructive' : ''}
-                  />
-                  {errors.linkedInUrl && <p className="text-xs text-destructive">{errors.linkedInUrl}</p>}
-                </div>
-              </>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="linkedInUrl">
+                {source === 'LinkedIn' ? 'LinkedIn Profile URL' :
+                  source === 'WhatsApp' ? 'WhatsApp Number' :
+                    source === 'Website' ? 'Website URL' :
+                      source === 'Referral' ? 'Referrer Name' :
+                        'Source Details'}
+              </Label>
+              <Input
+                id="linkedInUrl"
+                value={linkedInUrl}
+                onChange={(e) => setLinkedInUrl(e.target.value)}
+                placeholder={
+                  source === 'LinkedIn' ? 'linkedin.com/in/username' :
+                    source === 'WhatsApp' ? '+1234567890' :
+                      source === 'Website' ? 'https://example.com' :
+                        source === 'Referral' ? 'Name of referrer' :
+                          'Enter details'
+                }
+                disabled={isLocked}
+                className={errors.linkedInUrl ? 'border-destructive' : ''}
+              />
+              {errors.linkedInUrl && <p className="text-xs text-destructive">{errors.linkedInUrl}</p>}
+            </div>
           </div>
 
           {source === 'LinkedIn' && (
@@ -601,6 +609,6 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
           )}
         </div>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 }
