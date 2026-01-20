@@ -22,17 +22,11 @@ exports.getLeads = async (req, res) => {
         // Verify admin status robustly
         let isAdmin = sessionClaims?.metadata?.role === 'admin';
 
-        // If critical operation or doubt, double check with Clerk API
-        // For 'view all', we can be stricter or trust the token. 
-        // Token might be stale. Let's do a double check if token says NO but we suspect something? 
-        // No, better to trust token for speed, BUT use verifyAdmin if we want to be 100% sure about permissions.
-        // Given the bug, let's use verifyAdmin to be sure. It adds latency but fixes the "Stale Token" bug.
-        // Optimization: user verifyAdmin only if sessionClaims doesn't have it? 
-        // Or just use verifyAdmin always for now to fix the bug.
+        console.log(`[getLeads] Request from User: ${userId}. Initial Admin Check: ${isAdmin}`);
 
-        // Actually, if sessionClaims is OLD, it won't have the role.
         if (!isAdmin) {
             isAdmin = await verifyAdmin(userId);
+            console.log(`[getLeads] Double Check Admin Status: ${isAdmin}`);
         }
 
         let query = {};
@@ -40,7 +34,11 @@ exports.getLeads = async (req, res) => {
             query.createdBy = userId;
         }
 
+        console.log(`[getLeads] Executing Query:`, JSON.stringify(query));
+
         const leads = await Lead.find(query).sort({ createdAt: -1 });
+        console.log(`[getLeads] Leads Found: ${leads.length}`);
+
         res.status(200).json(leads);
     } catch (error) {
         console.error('Error fetching leads:', error);
@@ -149,13 +147,16 @@ exports.getAdminLeadStats = async (req, res) => {
         // Double check admin role
         const { userId } = req.auth;
         const isAdmin = await verifyAdmin(userId);
+        console.log(`[getAdminLeadStats] Admin Check for ${userId}: ${isAdmin}`);
 
         if (!isAdmin) {
             return res.status(403).json({ message: 'Access denied: Admin only' });
         }
 
         // 1. Fetch all users from Clerk to ensure we show everyone
+        console.log('[getAdminLeadStats] Fetching users from Clerk...');
         const clerkUsers = await clerkClient.users.getUserList({ limit: 100 });
+        console.log(`[getAdminLeadStats] Clerk Users Found: ${clerkUsers.length}`);
         const clerkUserMap = new Map(clerkUsers.map(u => [u.id, u]));
 
         // 2. Aggregate stats from DB
