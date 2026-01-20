@@ -46,11 +46,11 @@ const leadSchema = new mongoose.Schema({
     },
     nextAction: {
         type: String,
-        required: true,
+        default: '',
     },
     nextActionDate: {
-        type: String, // Keeping as string to match frontend 'YYYY-MM-DD' format or ISO string
-        required: true,
+        type: String,
+        default: '',
     },
     contextNote: {
         type: String,

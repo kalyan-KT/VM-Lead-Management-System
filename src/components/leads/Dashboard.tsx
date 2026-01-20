@@ -171,6 +171,13 @@ export function Dashboard() {
   const filteredLeads = useMemo(() => {
     let result = leads;
 
+    // Admin Privacy Logic: 
+    // By default, Admin sees only their own leads in the main lists (Dashboard, Table, Overdue etc.)
+    // They can view other users' leads by clicking on a user in "User Lead Activity" (activeView === 'user_leads').
+    if (isAdmin && user?.id && activeView !== 'user_leads' && activeView !== 'users') {
+      result = result.filter(l => l.createdBy === user.id);
+    }
+
     // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -219,7 +226,7 @@ export function Dashboard() {
     }
 
     return result;
-  }, [leads, searchQuery, statusFilter, sourceFilter, priorityFilter, activeView]);
+  }, [leads, searchQuery, statusFilter, sourceFilter, priorityFilter, activeView, isAdmin, user?.id, selectedUserForLeads]);
 
   // Group leads for dashboard view
   const groupedLeads = useMemo(() => {

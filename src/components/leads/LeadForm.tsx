@@ -113,12 +113,12 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
     const newErrors: Record<string, string> = {};
 
     if (!name.trim()) newErrors.name = 'Name is required';
-    // Primary contact is now optional
-    if (linkedInUrl.trim() && !validateLinkedInUrl(linkedInUrl)) {
+
+    // LinkedIn URL validation only if provided and source is LinkedIn
+    if (source === 'LinkedIn' && linkedInUrl.trim() && !validateLinkedInUrl(linkedInUrl)) {
       newErrors.linkedInUrl = 'URL must contain linkedin.com/';
     }
-    if (!nextAction.trim()) newErrors.nextAction = 'Next action is required';
-    if (!nextActionDate) newErrors.nextActionDate = 'Next action date is required';
+    // Next Action and Date are now optional
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -139,20 +139,28 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
   const handleSubmit = () => {
     if (!validateForm()) return;
 
+    // Handle LinkedIn Post Link - append to relevantLinks if present
+    let finalLinks = [...relevantLinks].filter(l => l.trim());
+    if (source === 'LinkedIn' && linkedInPostLink.trim()) {
+      if (!finalLinks.includes(linkedInPostLink.trim())) {
+        finalLinks.push(linkedInPostLink.trim());
+      }
+    }
+
     const lead: Lead = {
       id: existingLead?.id || generateId(),
       name: name.trim(),
       source,
       primaryContact: primaryContact.trim(),
-      linkedInUrl: linkedInUrl.trim(),
+      linkedInUrl: source === 'LinkedIn' ? linkedInUrl.trim() : '',
       status,
       nextAction: nextAction.trim(),
-      nextActionDate,
+      nextActionDate: nextActionDate || '', // Send empty string if optional
       contextNote: contextNote.trim() || undefined,
       priority,
       tags,
       valueEstimate: valueEstimate.trim() || undefined,
-      relevantLinks: relevantLinks.filter(l => l.trim()),
+      relevantLinks: finalLinks,
       documents,
       followUps,
       meetingNotes,
@@ -161,6 +169,8 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
       lastContactedAt: existingLead?.status !== status
         ? new Date().toISOString()
         : existingLead?.lastContactedAt || new Date().toISOString(),
+      createdBy: existingLead?.createdBy || '',
+      creatorEmail: existingLead?.creatorEmail,
     };
 
     onSave(lead);
@@ -168,8 +178,18 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
     onClose();
   };
 
-  const isValid = name.trim() &&
-    (!linkedInUrl.trim() || validateLinkedInUrl(linkedInUrl)) && nextAction.trim() && nextActionDate;
+  const isValid = name.trim().length > 0;
+
+  // New state for post link
+  const [linkedInPostLink, setLinkedInPostLink] = useState('');
+
+  // Extract post link on edit
+  useEffect(() => {
+    if (existingLead && existingLead.relevantLinks) {
+      const postLink = existingLead.relevantLinks.find(l => l.includes('linkedin.com/posts/') || l.includes('linkedin.com/feed/update/'));
+      if (postLink) setLinkedInPostLink(postLink);
+    }
+  }, [existingLead]);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -232,23 +252,40 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
               {errors.primaryContact && <p className="text-xs text-destructive">{errors.primaryContact}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="linkedInUrl">LinkedIn Profile URL</Label>
-              <Input
-                id="linkedInUrl"
-                value={linkedInUrl}
-                onChange={(e) => setLinkedInUrl(e.target.value)}
-                placeholder="linkedin.com/in/username"
-                disabled={isLocked}
-                className={errors.linkedInUrl ? 'border-destructive' : ''}
-              />
-              {errors.linkedInUrl && <p className="text-xs text-destructive">{errors.linkedInUrl}</p>}
-            </div>
+            {source === 'LinkedIn' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="linkedInUrl">LinkedIn Profile URL</Label>
+                  <Input
+                    id="linkedInUrl"
+                    value={linkedInUrl}
+                    onChange={(e) => setLinkedInUrl(e.target.value)}
+                    placeholder="linkedin.com/in/username"
+                    disabled={isLocked}
+                    className={errors.linkedInUrl ? 'border-destructive' : ''}
+                  />
+                  {errors.linkedInUrl && <p className="text-xs text-destructive">{errors.linkedInUrl}</p>}
+                </div>
+              </>
+            )}
           </div>
+
+          {source === 'LinkedIn' && (
+            <div className="space-y-2">
+              <Label htmlFor="linkedInPostLink">LinkedIn Post Link</Label>
+              <Input
+                id="linkedInPostLink"
+                value={linkedInPostLink}
+                onChange={(e) => setLinkedInPostLink(e.target.value)}
+                placeholder="Link to the post or update"
+                disabled={isLocked}
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="status">Status *</Label>
+              <Label htmlFor="status">Status</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as LeadStatus)} disabled={isLocked}>
                 <SelectTrigger id="status">
                   <SelectValue />
@@ -262,7 +299,7 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="nextAction">Next Action *</Label>
+              <Label htmlFor="nextAction">Next Action</Label>
               <Input
                 id="nextAction"
                 value={nextAction}
@@ -275,7 +312,7 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="nextActionDate">Next Action Date *</Label>
+              <Label htmlFor="nextActionDate">Next Action Date</Label>
               <Input
                 id="nextActionDate"
                 type="date"
