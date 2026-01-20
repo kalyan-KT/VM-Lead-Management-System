@@ -22,11 +22,9 @@ exports.getLeads = async (req, res) => {
         // Verify admin status robustly
         let isAdmin = sessionClaims?.metadata?.role === 'admin';
 
-        console.log(`[getLeads] Request from User: ${userId}. Initial Admin Check: ${isAdmin}`);
-
+        // Actually, if sessionClaims is OLD, it won't have the role.
         if (!isAdmin) {
             isAdmin = await verifyAdmin(userId);
-            console.log(`[getLeads] Double Check Admin Status: ${isAdmin}`);
         }
 
         let query = {};
@@ -34,10 +32,7 @@ exports.getLeads = async (req, res) => {
             query.createdBy = userId;
         }
 
-        console.log(`[getLeads] Executing Query:`, JSON.stringify(query));
-
         const leads = await Lead.find(query).sort({ createdAt: -1 });
-        console.log(`[getLeads] Leads Found: ${leads.length}`);
 
         res.status(200).json(leads);
     } catch (error) {
@@ -147,16 +142,13 @@ exports.getAdminLeadStats = async (req, res) => {
         // Double check admin role
         const { userId } = req.auth;
         const isAdmin = await verifyAdmin(userId);
-        console.log(`[getAdminLeadStats] Admin Check for ${userId}: ${isAdmin}`);
 
         if (!isAdmin) {
             return res.status(403).json({ message: 'Access denied: Admin only' });
         }
 
         // 1. Fetch all users from Clerk to ensure we show everyone
-        console.log('[getAdminLeadStats] Fetching users from Clerk...');
         const clerkUsers = await clerkClient.users.getUserList({ limit: 100 });
-        console.log(`[getAdminLeadStats] Clerk Users Found: ${clerkUsers.length}`);
         const clerkUserMap = new Map(clerkUsers.map(u => [u.id, u]));
 
         // 2. Aggregate stats from DB
