@@ -167,6 +167,14 @@ export function Dashboard() {
     }
   };
 
+  // Base leads for sidebar counts (Admin Privacy applied)
+  const sidebarLeads = useMemo(() => {
+    if (isAdmin && user?.id) {
+      return leads.filter(l => l.createdBy === user.id);
+    }
+    return leads;
+  }, [leads, isAdmin, user?.id]);
+
   // Derived state
   const filteredLeads = useMemo(() => {
     let result = leads;
@@ -327,7 +335,7 @@ export function Dashboard() {
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-72">
               <LeadSidebar
-                leads={leads}
+                leads={sidebarLeads}
                 activeView={activeView}
                 onViewChange={setActiveView}
                 searchQuery={searchQuery}
@@ -347,7 +355,7 @@ export function Dashboard() {
       </div>
 
       <LeadSidebar
-        leads={leads}
+        leads={sidebarLeads}
         activeView={activeView}
         onViewChange={setActiveView}
         searchQuery={searchQuery}
