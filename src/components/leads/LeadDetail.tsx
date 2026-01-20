@@ -1,4 +1,5 @@
-import { useState } from 'react';
+// Sync local state when lead changes
+import { useState, useEffect } from 'react';
 import { Lead, LeadStatus, LeadPriority } from '@/types/lead';
 import { isLockedStatus, getToday, addNote } from '@/lib/leadStorage';
 import { Button } from '@/components/ui/button';
@@ -67,14 +68,14 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete }: 
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
 
   // Sync local state when lead changes
-  useState(() => {
+  useEffect(() => {
     if (lead) {
-      setNextAction(lead.nextAction);
-      setNextActionDate(lead.nextActionDate);
+      setNextAction(lead.nextAction || '');
+      setNextActionDate(lead.nextActionDate || '');
       setStatus(lead.status);
       setPriority(lead.priority);
     }
-  });
+  }, [lead]);
 
   if (!lead) return null;
 
@@ -133,6 +134,7 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete }: 
       priority,
       lastContactedAt: lead.status !== status ? new Date().toISOString() : lead.lastContactedAt,
     });
+    onClose();
   };
 
   const getStatusColor = (s: string) => {
@@ -479,8 +481,8 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete }: 
 
       {/* File Preview Dialog */}
       <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden h-[90vh] flex flex-col">
-          <DialogHeader className="p-4 border-b bg-gray-50 flex flex-row items-center justify-between">
+        <DialogContent className="max-w-4xl p-0 overflow-hidden h-[90vh] flex flex-col bg-background">
+          <DialogHeader className="p-4 border-b bg-muted/30 flex flex-row items-center justify-between">
             <DialogTitle className="text-base truncate max-w-[80%]">
               {previewFile?.name}
             </DialogTitle>
@@ -502,7 +504,7 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete }: 
               Download
             </Button>
           </DialogHeader>
-          <div className="flex-1 bg-gray-100 p-4 flex items-center justify-center overflow-auto">
+          <div className="flex-1 bg-muted/50 p-4 flex items-center justify-center overflow-auto">
             {previewFile?.type === 'image' ? (
               <img
                 src={previewFile.url}
@@ -512,22 +514,22 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete }: 
             ) : previewFile?.type === 'pdf' ? (
               <iframe
                 src={`${previewFile.url}#toolbar=0`}
-                className="w-full h-full rounded-md shadow bg-white"
+                className="w-full h-full rounded-md shadow bg-background"
                 title={previewFile.name}
               />
             ) : previewFile?.type === 'text' ? (
               <iframe
                 src={previewFile.url}
-                className="w-full h-full rounded-md shadow bg-white"
+                className="w-full h-full rounded-md shadow bg-background"
                 title={previewFile.name}
               />
             ) : (
               <div className="text-center">
-                <div className="h-16 w-16 bg-gray-200 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <FileText className="h-8 w-8 text-gray-400" />
+                <div className="h-16 w-16 bg-muted rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <FileText className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <p className="text-gray-900 font-medium">Preview not available for this file type</p>
-                <p className="text-sm text-gray-500 mb-4">{previewFile?.name}</p>
+                <p className="text-foreground font-medium">Preview not available for this file type</p>
+                <p className="text-sm text-muted-foreground mb-4">{previewFile?.name}</p>
                 <Button onClick={() => {
                   if (!previewFile) return;
                   window.open(previewFile.url, '_blank');

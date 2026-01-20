@@ -30,6 +30,8 @@ export interface MeetingNote {
 
 export interface Lead {
   id: string;
+  createdBy: string;
+  creatorEmail?: string;
   name: string;
   source: LeadSource;
   primaryContact: string;
@@ -50,4 +52,4 @@ export interface Lead {
   lastContactedAt: string;
 }
 
-export type ViewFilter = 'all' | 'today' | 'overdue' | 'active' | 'closed' | 'table';
+export type ViewFilter = 'all' | 'today' | 'overdue' | 'active' | 'closed' | 'table' | 'users' | 'user_leads';

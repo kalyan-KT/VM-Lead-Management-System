@@ -1,22 +1,28 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Lead, ViewFilter, LeadSource, LeadStatus, LeadPriority } from '@/types/lead';
-import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead } from '@/lib/leadStorage';
+import { Lead, ViewFilter } from '@/types/lead';
+import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead, getAdminLeadStats, AdminLeadStat, getAdminDashboardStats, AdminDashboardStats as AdminStatsType } from '@/lib/leadStorage';
 import { LeadCard } from './LeadCard';
 import { LeadTable } from './LeadTable';
 import { LeadForm } from './LeadForm';
 import { LeadDetail } from './LeadDetail';
 import { LeadSidebar } from './LeadSidebar';
 import { DashboardStats } from './DashboardStats';
+import { UserLeadActivity } from './UserLeadActivity';
+import { AdminDashboardStats } from './AdminDashboardStats';
+import ManageUsers from '@/pages/ManageUsers';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, AlertCircle, Flame, Clock, Menu, Filter } from 'lucide-react';
+import { Plus, AlertCircle, Flame, Clock, Menu, Filter, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LeadFilters } from './LeadFilters';
 import { AccountModal } from "@/components/account/AccountModal";
+import { useAuth, useUser } from '@clerk/clerk-react';
 
 export function Dashboard() {
+  const { getToken } = useAuth();
+  const { user } = useUser();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [activeView, setActiveView] = useState<ViewFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,19 +34,78 @@ export function Dashboard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [adminStats, setAdminStats] = useState<AdminLeadStat[]>([]);
+  const [adminDashboardStats, setAdminDashboardStats] = useState<AdminStatsType | null>(null);
+  const [selectedUserForLeads, setSelectedUserForLeads] = useState<{ id: string; email: string } | null>(null);
+
+  const isAdmin = user?.publicMetadata?.role === 'admin';
 
   useEffect(() => {
     const fetchLeads = async () => {
-      const data = await getLeads();
+      const token = await getToken();
+      const data = await getLeads(token || undefined);
       setLeads(data);
     };
     fetchLeads();
-  }, []);
+  }, [getToken]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      const fetchAdminData = async () => {
+        const token = await getToken();
+        if (token) {
+          const stats = await getAdminLeadStats(token);
+          setAdminStats(stats);
+
+          const dashboardStats = await getAdminDashboardStats(token);
+          setAdminDashboardStats(dashboardStats);
+        }
+      };
+      fetchAdminData();
+    }
+  }, [isAdmin, getToken, leads]); // Re-fetch stats when leads change
+
+  const handleCardAction = (action: string) => {
+    if (action === 'hot') {
+      setPriorityFilter(['High']);
+      setActiveView('all');
+    } else if (action === 'all') {
+      setActiveView('all');
+      setPriorityFilter([]);
+      setStatusFilter([]);
+      setSearchQuery('');
+    } else if (action === 'users' || action === 'users_active') {
+      setActiveView('users');
+    } else if (action === 'leads_today') {
+      setActiveView('table');
+    } else if (action === 'leads_active' || action === 'active') { // Assuming Active card sends this
+      setActiveView('active');
+    } else {
+      // @ts-expect-error - dynamic check
+      setActiveView(action as ViewFilter);
+      setPriorityFilter([]);
+      setStatusFilter([]);
+      setSearchQuery('');
+    }
+  };
+
+  const handleUserClick = (userId: string, email: string) => {
+    setSelectedUserForLeads({ id: userId, email });
+    setActiveView('user_leads');
+  };
 
   const handleSaveLead = async (lead: Lead) => {
     try {
-      await saveLead(lead);
-      const data = await getLeads();
+      const token = await getToken();
+
+      // Inject creator email if new lead
+      if (!lead.id || !lead.id.match(/^[0-9a-fA-F]{24}$/)) {
+        // @ts-expect-error - Adding creatorEmail dynamically
+        lead.creatorEmail = user?.primaryEmailAddress?.emailAddress;
+      }
+
+      await saveLead(lead, token || undefined);
+      const data = await getLeads(token || undefined);
       setLeads(data);
       setEditingLead(undefined);
     } catch (error) {
@@ -52,9 +117,10 @@ export function Dashboard() {
   const handleDeleteLead = async (id: string) => {
     if (!id) return;
     try {
-      await deleteLead(id);
+      const token = await getToken();
+      await deleteLead(id, token || undefined);
       // Success path
-      const data = await getLeads();
+      const data = await getLeads(token || undefined);
       setLeads(data);
       if (selectedLead?.id === id) {
         setDetailOpen(false);
@@ -64,7 +130,8 @@ export function Dashboard() {
       console.error('Failed to delete lead:', error);
       // Even if delete failed (e.g. 404 not found), refresh the list to remove ghost items
       try {
-        const data = await getLeads();
+        const token = await getToken();
+        const data = await getLeads(token || undefined);
         setLeads(data);
         // If the lead is gone from the server, verify and close detail
         if (!data.find(l => l.id === id)) {
@@ -88,14 +155,15 @@ export function Dashboard() {
 
   const handleUpdateLead = async (lead: Lead) => {
     try {
-      const updatedLead = await saveLead(lead);
-      const data = await getLeads();
+      const token = await getToken();
+      const updatedLead = await saveLead(lead, token || undefined);
+      const data = await getLeads(token || undefined);
       setLeads(data);
       // Update selected lead to match the FRESH data from server/utils
       setSelectedLead(updatedLead);
     } catch (error) {
       console.error("Failed to update lead", error);
-      alert("Failed to update lead changes.");
+      alert(error instanceof Error ? error.message : "Failed to update lead changes.");
     }
   };
 
@@ -143,6 +211,11 @@ export function Dashboard() {
         break;
       case 'closed':
         return result.filter((l) => ['Closed', 'Dropped'].includes(l.status));
+      case 'user_leads':
+        if (selectedUserForLeads) {
+          result = result.filter((l) => l.createdBy === selectedUserForLeads.id);
+        }
+        break;
     }
 
     return result;
@@ -291,6 +364,15 @@ export function Dashboard() {
               {activeView === 'today' && "Today's Follow-ups"}
               {activeView === 'active' && 'Active Leads'}
               {activeView === 'closed' && 'Closed / Dropped'}
+              {activeView === 'users' && 'User Management'}
+              {activeView === 'user_leads' && (
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon" onClick={() => setActiveView('all')} className="-ml-2 h-8 w-8">
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                  <span>Leads by {selectedUserForLeads?.email}</span>
+                </div>
+              )}
             </h1>
             <p className="text-sm text-muted-foreground">
               {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''}
@@ -329,11 +411,21 @@ export function Dashboard() {
         </header>
 
         <div className="p-6">
-          {activeView === 'table' ? (
+          {activeView === 'users' ? (
+            <ManageUsers />
+          ) : activeView === 'table' || activeView === 'user_leads' ? (
             <LeadTable leads={filteredLeads} onLeadClick={handleLeadClick} />
           ) : activeView === 'all' && groupedLeads ? (
             <>
-              <DashboardStats leads={leads} />
+              <DashboardStats leads={leads} onCardClick={handleCardAction} />
+
+              {/* Admin Section */}
+              {isAdmin && (
+                <>
+                  <AdminDashboardStats stats={adminDashboardStats} onCardClick={handleCardAction} />
+                  <UserLeadActivity stats={adminStats} onUserClick={handleUserClick} />
+                </>
+              )}
 
               {renderLeadSection(
                 'Overdue',

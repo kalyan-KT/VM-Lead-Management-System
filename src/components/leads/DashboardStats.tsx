@@ -3,9 +3,10 @@ import { isActiveStatus, isOverdue } from '@/lib/leadStorage';
 
 interface DashboardStatsProps {
     leads: Lead[];
+    onCardClick?: (action: string) => void;
 }
 
-export function DashboardStats({ leads }: DashboardStatsProps) {
+export function DashboardStats({ leads, onCardClick }: DashboardStatsProps) {
     // Calculate Metrics
     const totalLeads = leads.length;
     const activeLeads = leads.filter(l => isActiveStatus(l.status)).length;
@@ -18,26 +19,30 @@ export function DashboardStats({ leads }: DashboardStatsProps) {
         {
             label: 'TOTAL LEADS',
             value: totalLeads,
-            colorClass: 'text-blue-600',
-            dotClass: 'bg-blue-500' // Visual accent
+            colorClass: 'text-blue-600 dark:text-blue-400',
+            dotClass: 'bg-blue-500',
+            action: 'all'
         },
         {
             label: 'ACTIVE',
             value: activeLeads,
-            colorClass: 'text-emerald-600',
-            dotClass: 'bg-emerald-500'
+            colorClass: 'text-emerald-600 dark:text-emerald-400',
+            dotClass: 'bg-emerald-500',
+            action: 'active'
         },
         {
             label: 'HOT LEADS',
             value: hotLeads,
-            colorClass: 'text-orange-600',
-            dotClass: 'bg-orange-500'
+            colorClass: 'text-orange-600 dark:text-orange-400',
+            dotClass: 'bg-orange-500',
+            action: 'hot'
         },
         {
             label: 'OVERDUE',
             value: overdueLeads,
-            colorClass: 'text-red-600',
-            dotClass: 'bg-red-500'
+            colorClass: 'text-red-600 dark:text-red-400',
+            dotClass: 'bg-red-500',
+            action: 'overdue'
         },
     ];
 
@@ -46,7 +51,8 @@ export function DashboardStats({ leads }: DashboardStatsProps) {
             {stats.map((stat, index) => (
                 <div
                     key={index}
-                    className="group relative flex flex-col justify-between rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5 transition-all duration-200 hover:-translate-y-1 hover:shadow-md cursor-default"
+                    onClick={() => onCardClick?.(stat.action)}
+                    className="group relative flex flex-col justify-between rounded-xl bg-card text-card-foreground p-6 shadow-sm ring-1 ring-border transition-all duration-200 hover:-translate-y-1 hover:shadow-md cursor-pointer"
                 >
                     {/* Top Row: Label with small accent dot */}
                     <div className="flex items-center gap-2 mb-3">

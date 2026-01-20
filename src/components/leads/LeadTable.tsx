@@ -101,10 +101,10 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
         switch (status) {
             case 'New': return 'bg-primary/10 text-primary hover:bg-primary/20';
             case 'Contacted': return 'bg-secondary text-secondary-foreground hover:bg-secondary/80';
-            case 'Interested': return 'bg-green-100 text-green-700 hover:bg-green-200';
-            case 'Follow-up': return 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200';
-            case 'Closed': return 'bg-slate-100 text-slate-700 hover:bg-slate-200';
-            case 'Dropped': return 'bg-red-50 text-red-700 hover:bg-red-100';
+            case 'Interested': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200';
+            case 'Follow-up': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 hover:bg-yellow-200';
+            case 'Closed': return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200';
+            case 'Dropped': return 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100';
             default: return 'bg-muted text-muted-foreground';
         }
     };
@@ -118,7 +118,7 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
                 </Button>
             </div>
 
-            <div className="border rounded-md overflow-hidden bg-white shadow-sm">
+            <div className="border rounded-md overflow-hidden bg-card text-card-foreground shadow-sm">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
@@ -163,16 +163,16 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
                                             key={lead.id}
                                             className={cn(
                                                 "cursor-pointer transition-colors",
-                                                index % 2 === 0 ? "bg-white" : "bg-slate-50/50",
-                                                overdue ? "bg-red-50/50 hover:bg-red-50" :
-                                                    today ? "bg-orange-50/50 hover:bg-orange-50" :
+                                                index % 2 === 0 ? "bg-card" : "bg-muted/20",
+                                                overdue ? "bg-red-50/50 dark:bg-red-900/10 hover:bg-red-100/50 dark:hover:bg-red-900/20" :
+                                                    today ? "bg-orange-50/50 dark:bg-orange-900/10 hover:bg-orange-100/50 dark:hover:bg-orange-900/20" :
                                                         "hover:bg-muted/50"
                                             )}
                                             onClick={() => onLeadClick(lead)}
                                         >
                                             <TableCell className={cn("font-medium sticky left-0 z-10",
-                                                index % 2 === 0 ? "bg-white" : "bg-slate-50/50",
-                                                overdue ? "bg-red-50/50" : today ? "bg-orange-50/50" : ""
+                                                index % 2 === 0 ? "bg-card" : "bg-muted/20", // Note: Sticky might be slightly transparent
+                                                overdue ? "bg-red-50 dark:bg-red-900/10" : today ? "bg-orange-50 dark:bg-orange-900/10" : ""
                                             )}>
                                                 {lead.name}
                                             </TableCell>
@@ -185,9 +185,9 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
                                             <TableCell>
                                                 <span className={cn(
                                                     "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium",
-                                                    lead.priority === 'High' ? "bg-red-100 text-red-700" :
-                                                        lead.priority === 'Medium' ? "bg-yellow-100 text-yellow-700" :
-                                                            "bg-slate-100 text-slate-700"
+                                                    lead.priority === 'High' ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
+                                                        lead.priority === 'Medium' ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                                                            "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400"
                                                 )}>
                                                     {lead.priority}
                                                 </span>
@@ -209,7 +209,7 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
                                             <TableCell>
                                                 <div className="flex flex-wrap gap-1 max-w-[200px]">
                                                     {lead.tags.slice(0, 2).map(tag => (
-                                                        <span key={tag} className="inline-flex text-[10px] bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">
+                                                        <span key={tag} className="inline-flex text-[10px] bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded">
                                                             {tag}
                                                         </span>
                                                     ))}

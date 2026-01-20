@@ -10,11 +10,13 @@ const {
     addNote,
     archiveLead,
     deleteLead,
+    getAdminLeadStats,
 } = require('../controllers/leads.controller');
 
 const routes = express.Router();
 const multer = require('multer');
 const path = require('path');
+const requireAuth = require('../middleware/auth.middleware');
 
 // Configure Multer
 const storage = multer.diskStorage({
@@ -28,6 +30,13 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
+
+// Apply Auth Middleware to all API routes
+// We can apply globally or per route. Since we want all lead operations to be protected now:
+routes.use(requireAuth);
+
+// Admin Stats Route
+routes.get('/admin/lead-stats', getAdminLeadStats);
 
 // Upload Endpoint
 routes.post('/upload', upload.single('file'), (req, res) => {
@@ -43,7 +52,8 @@ routes.post('/upload', upload.single('file'), (req, res) => {
     });
 });
 
-// Download Endpoint
+// Download Endpoint - Optional: Protect this too? 
+// Current impl uses path param. Let's keep it protected via the global use(requireAuth) above.
 routes.get('/files/:filename', (req, res) => {
     const filename = req.params.filename;
     const filePath = path.join(__dirname, '../../uploads', filename);

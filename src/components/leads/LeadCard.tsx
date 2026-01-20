@@ -45,6 +45,13 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
+          {lead.creatorEmail && (
+            <div className="mb-1.5">
+              <span className="inline-flex items-center text-[10px] font-medium text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
+                By {lead.creatorEmail}
+              </span>
+            </div>
+          )}
           <div className="flex items-center gap-2 mb-2">
             <h3 className="font-semibold text-foreground truncate">{lead.name}</h3>
             {overdue && (

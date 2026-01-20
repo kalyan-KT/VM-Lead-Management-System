@@ -20,6 +20,9 @@ app.get('/', (req, res) => {
 
 // Import Routes
 const leadRoutes = require('./routes/leads.routes');
+const adminRoutes = require('./routes/admin.routes');
+
 app.use('/api/leads', leadRoutes);
+app.use('/api/admin', adminRoutes);
 
 module.exports = app;

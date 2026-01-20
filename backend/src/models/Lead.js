@@ -112,6 +112,15 @@ const leadSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    createdBy: {
+        type: String,
+        required: false, // Optional for now to support legacy data
+        index: true,
+    },
+    creatorEmail: {
+        type: String,
+        required: false,
+    },
 }, {
     timestamps: true,
     toJSON: {

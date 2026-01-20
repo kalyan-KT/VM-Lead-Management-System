@@ -18,10 +18,12 @@ import {
   CheckCircle,
   LayoutDashboard,
   X,
-  Table
+  Table,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LeadFilters } from './LeadFilters';
+import { useUser } from '@clerk/clerk-react';
 
 interface LeadSidebarProps {
   leads: Lead[];
@@ -58,6 +60,7 @@ export function LeadSidebar({
   className,
   onItemClick,
 }: LeadSidebarProps) {
+  const { user } = useUser();
   const counts = {
     all: leads.length,
     overdue: leads.filter(l => isOverdue(l.nextActionDate) && isActiveStatus(l.status)).length,
@@ -82,6 +85,12 @@ export function LeadSidebar({
     { id: 'active' as ViewFilter, label: 'Active Leads', icon: Users, count: counts.active },
     { id: 'closed' as ViewFilter, label: 'Closed / Dropped', icon: CheckCircle, count: counts.closed },
   ];
+
+  // Admin Link
+  if (user?.publicMetadata?.role === 'admin') {
+    // @ts-expect-error - Adding custom view type for navigation
+    navItems.push({ id: 'users', label: 'Manage Users', icon: Settings, count: 0 });
+  }
 
   return (
     <aside className={cn("w-64 h-full bg-sidebar border-r border-sidebar-border flex flex-col", className)}>
