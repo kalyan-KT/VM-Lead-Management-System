@@ -89,7 +89,7 @@ export function LeadSidebar({
   // Admin Link
   if (user?.publicMetadata?.role === 'admin') {
     // @ts-expect-error - Adding custom view type for navigation
-    navItems.push({ id: 'users', label: 'Manage Users', icon: Settings, count: 0 });
+    navItems.push({ id: 'users', label: 'Manage Users', icon: Settings, count: 0, hideCount: true });
   }
 
   return (
@@ -136,18 +136,21 @@ export function LeadSidebar({
               )} />
               {item.label}
             </span>
-            <span className={cn(
-              'text-xs px-2 py-0.5 rounded-full',
-              activeView === item.id
-                ? 'bg-sidebar-primary-foreground/20'
-                : item.danger && item.count > 0
-                  ? 'bg-destructive/10 text-destructive'
-                  : item.warning && item.count > 0
-                    ? 'bg-warning/10 text-warning'
-                    : 'bg-muted'
-            )}>
-              {item.count}
-            </span>
+            {/* @ts-expect-error - hideCount is optional */}
+            {!item.hideCount && (
+              <span className={cn(
+                'text-xs px-2 py-0.5 rounded-full',
+                activeView === item.id
+                  ? 'bg-sidebar-primary-foreground/20'
+                  : item.danger && item.count > 0
+                    ? 'bg-destructive/10 text-destructive'
+                    : item.warning && item.count > 0
+                      ? 'bg-warning/10 text-warning'
+                      : 'bg-muted'
+              )}>
+                {item.count}
+              </span>
+            )}
           </button>
         ))}
       </nav>

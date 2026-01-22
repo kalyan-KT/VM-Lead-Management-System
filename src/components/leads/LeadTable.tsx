@@ -197,9 +197,9 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
                                             </TableCell>
                                             <TableCell className="whitespace-nowrap">
                                                 {(() => {
-                                                    if (!lead.nextActionDate) return '-';
+                                                    if (!lead.nextActionDate) return <span className="text-muted-foreground text-xs italic">No Date</span>;
                                                     const date = new Date(lead.nextActionDate);
-                                                    return isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
+                                                    return isNaN(date.getTime()) ? <span className="text-muted-foreground text-xs italic">No Date</span> : date.toLocaleDateString();
                                                 })()}
                                             </TableCell>
                                             <TableCell>

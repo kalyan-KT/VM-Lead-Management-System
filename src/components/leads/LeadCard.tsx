@@ -86,11 +86,16 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
             </p>
             <p className="text-xs text-muted-foreground flex items-center gap-2">
               <Calendar className="h-3 w-3" />
-              {new Date(lead.nextActionDate).toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-              })}
+              {(() => {
+                if (!lead.nextActionDate) return <span className="italic">No Date</span>;
+                const d = new Date(lead.nextActionDate);
+                if (isNaN(d.getTime())) return <span className="italic">No Date</span>;
+                return d.toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                });
+              })()}
             </p>
           </div>
         </div>
