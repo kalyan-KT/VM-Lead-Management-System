@@ -143,7 +143,7 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
                                 <TableHead>Overdue</TableHead>
                                 <TableHead>Tags</TableHead>
                                 <TableHead className="hidden md:table-cell">Contact</TableHead>
-                                <TableHead className="hidden md:table-cell text-right">Links</TableHead>
+                                <TableHead className="hidden md:table-cell text-right">Post Links</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -224,17 +224,23 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
                                             </TableCell>
                                             <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{lead.primaryContact}</TableCell>
                                             <TableCell className="hidden md:table-cell text-right">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        window.open(lead.linkedInUrl.startsWith('http') ? lead.linkedInUrl : `https://${lead.linkedInUrl}`, '_blank');
-                                                    }}
-                                                >
-                                                    <LinkIcon className="h-3 w-3 text-blue-600" />
-                                                </Button>
+                                                {lead.relevantLinks && lead.relevantLinks.length > 0 ? (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const url = lead.relevantLinks[0];
+                                                            window.open(url.startsWith('http') ? url : `https://${url}`, '_blank');
+                                                        }}
+                                                        title="View Post"
+                                                    >
+                                                        <LinkIcon className="h-3 w-3 text-blue-600" />
+                                                    </Button>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">-</span>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     );
