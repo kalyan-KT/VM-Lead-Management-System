@@ -48,6 +48,7 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [valueEstimate, setValueEstimate] = useState('');
+  const [linkedInPostLink, setLinkedInPostLink] = useState('');
 
   // New States
   const [relevantLinks, setRelevantLinks] = useState<string[]>([]);
@@ -78,6 +79,9 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
       setDocuments(existingLead.documents || []);
       setFollowUps(existingLead.followUps || []);
       setMeetingNotes(existingLead.meetingNotes || []);
+
+      const postLink = existingLead.relevantLinks?.find(l => l.includes('linkedin.com/posts/') || l.includes('linkedin.com/feed/update/'));
+      setLinkedInPostLink(postLink || '');
     } else {
       resetForm();
     }
@@ -100,6 +104,7 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
     setDocuments([]);
     setFollowUps([]);
     setMeetingNotes([]);
+    setLinkedInPostLink('');
     setErrors({});
   };
 
@@ -180,16 +185,7 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
 
   const isValid = name.trim().length > 0;
 
-  // New state for post link
-  const [linkedInPostLink, setLinkedInPostLink] = useState('');
 
-  // Extract post link on edit
-  useEffect(() => {
-    if (existingLead && existingLead.relevantLinks) {
-      const postLink = existingLead.relevantLinks.find(l => l.includes('linkedin.com/posts/') || l.includes('linkedin.com/feed/update/'));
-      if (postLink) setLinkedInPostLink(postLink);
-    }
-  }, [existingLead]);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
