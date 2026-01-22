@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Lead, ViewFilter } from '@/types/lead';
-import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead, getAdminLeadStats, AdminLeadStat, getAdminDashboardStats, AdminDashboardStats as AdminStatsType } from '@/lib/leadStorage';
+import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead, getAdminLeadStats, AdminLeadStat, getAdminDashboardStats, AdminDashboardStats as AdminStatsType, cloneLead } from '@/lib/leadStorage';
 import { LeadCard } from './LeadCard';
 import { LeadTable } from './LeadTable';
 import { LeadForm } from './LeadForm';
@@ -13,7 +13,7 @@ import ManageUsers from '@/pages/ManageUsers';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, AlertCircle, Flame, Clock, Menu, Filter, ArrowLeft } from 'lucide-react';
+import { Plus, AlertCircle, Flame, Clock, Menu, Filter, ArrowLeft, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LeadFilters } from './LeadFilters';
@@ -81,7 +81,6 @@ export function Dashboard() {
     } else if (action === 'leads_active' || action === 'active') { // Assuming Active card sends this
       setActiveView('active');
     } else {
-      // @ts-expect-error - dynamic check
       setActiveView(action as ViewFilter);
       setPriorityFilter([]);
       setStatusFilter([]);
@@ -100,7 +99,6 @@ export function Dashboard() {
 
       // Inject creator email if new lead
       if (!lead.id || !lead.id.match(/^[0-9a-fA-F]{24}$/)) {
-        // @ts-expect-error - Adding creatorEmail dynamically
         lead.creatorEmail = user?.primaryEmailAddress?.emailAddress;
       }
 
@@ -164,6 +162,24 @@ export function Dashboard() {
     } catch (error) {
       console.error("Failed to update lead", error);
       alert(error instanceof Error ? error.message : "Failed to update lead changes.");
+    }
+  };
+
+  const handleClone = async (lead: Lead) => {
+    try {
+      if (!confirm(`Clone "${lead.name}" to your leads?`)) return;
+
+      const token = await getToken();
+      await cloneLead(lead.id, token || '');
+
+      // Refresh leads
+      const data = await getLeads(token || undefined);
+      setLeads(data);
+
+      alert(`Lead "${lead.name}" cloned to your dashboard.`);
+    } catch (error) {
+      console.error('Failed to clone lead:', error);
+      alert('Failed to clone lead.');
     }
   };
 
@@ -257,7 +273,13 @@ export function Dashboard() {
       .filter((l) => isUpcoming(l.nextActionDate))
       .sort((a, b) => new Date(a.nextActionDate).getTime() - new Date(b.nextActionDate).getTime());
 
-    return { overdue, today, upcoming };
+    const unscheduled = activeLeads.filter(l => {
+      if (!l.nextActionDate) return true;
+      const d = new Date(l.nextActionDate);
+      return isNaN(d.getTime());
+    });
+
+    return { overdue, today, upcoming, unscheduled };
   }, [filteredLeads, activeView]);
 
   // Collect all unique tags for autocomplete
@@ -432,7 +454,7 @@ export function Dashboard() {
             <LeadTable leads={filteredLeads} onLeadClick={handleLeadClick} />
           ) : activeView === 'all' && groupedLeads ? (
             <>
-              <DashboardStats leads={leads} onCardClick={handleCardAction} />
+              <DashboardStats leads={sidebarLeads} onCardClick={handleCardAction} />
 
               {/* Admin Section */}
               {isAdmin && (
@@ -459,9 +481,15 @@ export function Dashboard() {
                 <Clock className="h-4 w-4" />,
                 groupedLeads.upcoming
               )}
+              {renderLeadSection(
+                'Unscheduled Follow-ups',
+                <HelpCircle className="h-4 w-4" />,
+                groupedLeads.unscheduled
+              )}
               {groupedLeads.overdue.length === 0 &&
                 groupedLeads.today.length === 0 &&
-                groupedLeads.upcoming.length === 0 && (
+                groupedLeads.upcoming.length === 0 &&
+                groupedLeads.unscheduled.length === 0 && (
                   <div className="text-center py-12 text-muted-foreground">
                     <p className="mb-4">No active leads to follow up on</p>
                     <Button onClick={() => setFormOpen(true)} variant="outline" className="gap-2">
@@ -494,6 +522,7 @@ export function Dashboard() {
         onClose={() => setDetailOpen(false)}
         onUpdate={handleUpdateLead}
         onDelete={handleDeleteLead}
+        onClone={handleClone}
         onEdit={() => {
           setDetailOpen(false);
           setEditingLead(selectedLead);

@@ -96,7 +96,8 @@ export function LeadSidebar({
     <aside className={cn("w-64 h-full bg-sidebar border-r border-sidebar-border flex flex-col", className)}>
       {/* Logo / Title */}
       <div className="p-4 border-b border-sidebar-border flex flex-col items-start text-left">
-        <img src="/logo.png" alt="Lead Management System" className="h-10 w-auto mb-2" />
+        <img src="/logo.png" alt="Lead Management System" className="h-10 w-auto mb-2 block dark:hidden" />
+        <img src="/logo_darkmode.png" alt="Lead Management System" className="h-10 w-auto mb-2 hidden dark:block" />
         <p className="text-xs text-muted-foreground">Lead Management System</p>
       </div>
 

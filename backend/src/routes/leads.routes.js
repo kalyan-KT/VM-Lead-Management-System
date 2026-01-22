@@ -11,6 +11,7 @@ const {
     archiveLead,
     deleteLead,
     getAdminLeadStats,
+    cloneLead,
 } = require('../controllers/leads.controller');
 
 const routes = express.Router();
@@ -72,5 +73,6 @@ routes.route('/').get(getLeads).post(createLead);
 routes.route('/:id').get(getLead).put(updateLead).delete(deleteLead);
 routes.route('/:id/notes').post(addNote);
 routes.route('/:id/archive').patch(archiveLead);
+routes.route('/:id/clone').post(cloneLead);
 
 module.exports = routes;

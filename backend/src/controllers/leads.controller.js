@@ -314,3 +314,55 @@ exports.deleteLead = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+// @desc    Clone lead to admin (Admin Only)
+// @route   POST /api/leads/:id/clone
+// @access  Private (Admin only)
+exports.cloneLead = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userId, sessionClaims } = req.auth;
+
+        // 1. Verify Admin
+        let isAdmin = sessionClaims?.metadata?.role === 'admin';
+        if (!isAdmin) {
+            isAdmin = await verifyAdmin(userId);
+        }
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'Access denied: Admin only' });
+        }
+
+        // 2. Find Original Lead
+        const originalLead = await Lead.findById(id);
+        if (!originalLead) {
+            return res.status(404).json({ message: 'Lead not found' });
+        }
+
+        // 3. Fetch Admin Email (for creatorEmail)
+        const adminUser = await clerkClient.users.getUser(userId);
+        const adminEmail = adminUser.emailAddresses.find(e => e.id === adminUser.primaryEmailAddressId)?.emailAddress || adminUser.emailAddresses[0]?.emailAddress;
+
+        // 4. Create New Lead Object
+        const newLeadData = originalLead.toObject();
+
+        // Remove DB specific fields
+        delete newLeadData._id;
+        delete newLeadData.__v;
+        delete newLeadData.createdAt;
+        delete newLeadData.updatedAt;
+
+        // Override fields
+        newLeadData.createdBy = userId;
+        newLeadData.creatorEmail = adminEmail;
+        newLeadData.createdAt = new Date();
+        // Keep original notes, etc.
+
+        // 5. Save
+        const newLead = await Lead.create(newLeadData);
+
+        res.status(201).json(newLead);
+    } catch (error) {
+        console.error('Error cloning lead:', error);
+        res.status(500).json({ message: error.message });
+    }
+};

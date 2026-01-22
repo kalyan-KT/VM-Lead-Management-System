@@ -287,3 +287,27 @@ export const toggleAdminUserStatus = async (userId: string, action: 'enable' | '
     throw error;
   }
 };
+
+export const cloneLead = async (leadId: string, token: string): Promise<Lead> => {
+  try {
+    const response = await fetch(`${API_URL}/${leadId}/clone`, {
+      method: 'POST',
+      headers: getHeaders(token),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      try {
+        const json = JSON.parse(errorText);
+        throw new Error(json.message || 'Failed to clone lead');
+      } catch (e) {
+        throw new Error(`Failed to clone lead: ${errorText}`);
+      }
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error cloning lead:', error);
+    throw error;
+  }
+};

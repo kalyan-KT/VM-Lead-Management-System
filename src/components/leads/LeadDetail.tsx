@@ -1,5 +1,6 @@
 // Sync local state when lead changes
 import { useState, useEffect } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { Lead, LeadStatus, LeadPriority } from '@/types/lead';
 import { isLockedStatus, getToday, addNote } from '@/lib/leadStorage';
 import { Button } from '@/components/ui/button';
@@ -40,7 +41,8 @@ import {
   Download,
   Trash2,
   Eye,
-  FileText
+  FileText,
+  Copy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -51,12 +53,14 @@ interface LeadDetailProps {
   onUpdate: (lead: Lead) => void;
   onEdit: () => void;
   onDelete: (id: string) => void;
+  onClone?: (lead: Lead) => void;
 }
 
 const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Follow-up', 'Closed', 'Dropped'];
 const PRIORITIES: LeadPriority[] = ['High', 'Medium', 'Low'];
 
-export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete }: LeadDetailProps) {
+export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete, onClone }: LeadDetailProps) {
+  const { user } = useUser();
   const [newNote, setNewNote] = useState('');
   const [nextAction, setNextAction] = useState('');
   const [nextActionDate, setNextActionDate] = useState('');
@@ -169,7 +173,7 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete }: 
       <Sheet open={open} onOpenChange={onClose}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader className="pb-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pr-8">
               <SheetTitle className="text-xl font-semibold flex items-center gap-3">
                 {lead.name}
                 <Badge className={cn('text-xs', getStatusColor(lead.status))}>
@@ -413,6 +417,16 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete }: 
               <Button onClick={handleSaveFollowUp} className="w-full">
                 Save Changes
               </Button>
+            )}
+
+            {user?.publicMetadata?.role === 'admin' && lead.createdBy !== user?.id && (
+              <div className="pt-4 mt-2">
+                <p className="text-sm font-medium text-muted-foreground mb-2">Other Actions</p>
+                <Button variant="outline" className="w-full gap-2" onClick={() => onClone?.(lead)}>
+                  <Copy className="h-4 w-4" />
+                  Clone Lead
+                </Button>
+              </div>
             )}
           </div>
 

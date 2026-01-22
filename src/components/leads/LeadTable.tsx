@@ -196,7 +196,11 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
                                                 {lead.nextAction}
                                             </TableCell>
                                             <TableCell className="whitespace-nowrap">
-                                                {new Date(lead.nextActionDate).toLocaleDateString()}
+                                                {(() => {
+                                                    if (!lead.nextActionDate) return '-';
+                                                    const date = new Date(lead.nextActionDate);
+                                                    return isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
+                                                })()}
                                             </TableCell>
                                             <TableCell>
                                                 {overdue && (
