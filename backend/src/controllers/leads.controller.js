@@ -111,6 +111,11 @@ exports.updateLead = async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to update this lead' });
         }
 
+        // Admin Review Protection: Non-admins cannot update adminReview fields
+        if (!isAdmin && (req.body.adminReview !== undefined || req.body.adminReviewNote !== undefined)) {
+            return res.status(403).json({ message: 'Access denied: Only admins can update Admin Review fields' });
+        }
+
         // Clean up body to prevent updating immutable fields
         const updates = { ...req.body };
         delete updates._id;

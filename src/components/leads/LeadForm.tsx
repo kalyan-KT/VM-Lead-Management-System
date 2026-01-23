@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { Lead, LeadSource, LeadStatus, LeadPriority } from '@/types/lead';
 import { generateId, getToday, isLockedStatus } from '@/lib/leadStorage';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,11 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
   const [tagInput, setTagInput] = useState('');
   const [valueEstimate, setValueEstimate] = useState('');
   const [linkedInPostLink, setLinkedInPostLink] = useState('');
+
+  const { user } = useUser();
+  const isAdmin = user?.publicMetadata?.role === 'admin';
+  const [adminReview, setAdminReview] = useState<string | undefined>(undefined);
+  const [adminReviewNote, setAdminReviewNote] = useState('');
 
   // New States
   const [relevantLinks, setRelevantLinks] = useState<string[]>([]);
@@ -105,6 +111,8 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
     setFollowUps([]);
     setMeetingNotes([]);
     setLinkedInPostLink('');
+    setAdminReview(undefined);
+    setAdminReviewNote('');
     setErrors({});
   };
 
@@ -176,6 +184,7 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
         : existingLead?.lastContactedAt || new Date().toISOString(),
       createdBy: existingLead?.createdBy || '',
       creatorEmail: existingLead?.creatorEmail,
+      ...(isAdmin ? { adminReview: adminReview as any, adminReviewNote } : {}),
     };
 
     onSave(lead);
@@ -357,17 +366,41 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="contextNote">Context Note</Label>
-            <Textarea
-              id="contextNote"
-              value={contextNote}
-              onChange={(e) => setContextNote(e.target.value)}
-              placeholder="Any additional context..."
-              rows={3}
-              disabled={isLocked}
-            />
-          </div>
+
+
+          {/* Admin Review Section (Admin Only) */}
+          {isAdmin && (
+            <div className="space-y-4 pt-4 border-t">
+              <Label className="text-base font-semibold">Admin Review (Internal)</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Review Status</Label>
+                  <Select value={adminReview || ''} onValueChange={setAdminReview}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Action" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Sent Message">Sent Message</SelectItem>
+                      <SelectItem value="Sent Note">Sent Note</SelectItem>
+                      <SelectItem value="Hiring Post">Hiring Post (Rejected)</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {adminReview === 'Other' && (
+                  <div className="space-y-2">
+                    <Label>Admin Review Note</Label>
+                    <Textarea
+                      value={adminReviewNote}
+                      onChange={(e) => setAdminReviewNote(e.target.value)}
+                      placeholder="Enter admin review note..."
+                      rows={2}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
 
           {/* Relevant Links */}

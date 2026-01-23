@@ -50,6 +50,9 @@ export interface Lead {
   meetingNotes: MeetingNote[];
   createdAt: string;
   lastContactedAt: string;
+  // Admin Review
+  adminReview?: 'Sent Message' | 'Sent Note' | 'Hiring Post' | 'Other';
+  adminReviewNote?: string;
 }
 
 export type ViewFilter = 'all' | 'today' | 'overdue' | 'active' | 'closed' | 'table' | 'users' | 'user_leads';

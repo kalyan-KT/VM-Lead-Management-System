@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { Lead } from '@/types/lead';
 import { isOverdue, isToday } from '@/lib/leadStorage';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +26,8 @@ type SortDirection = 'asc' | 'desc';
 export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
     const [sortField, setSortField] = useState<SortField>('nextActionDate');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+    const { user } = useUser();
+    const isAdmin = user?.publicMetadata?.role === 'admin';
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
@@ -144,12 +147,13 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
                                 <TableHead>Tags</TableHead>
                                 <TableHead className="hidden md:table-cell">Contact</TableHead>
                                 <TableHead className="hidden md:table-cell text-right">Post Links</TableHead>
+                                {isAdmin && <TableHead>Admin Review</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {sortedLeads.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                                    <TableCell colSpan={isAdmin ? 11 : 10} className="text-center py-8 text-muted-foreground">
                                         No leads found matching your criteria
                                     </TableCell>
                                 </TableRow>
@@ -242,6 +246,22 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
                                                     <span className="text-xs text-muted-foreground">-</span>
                                                 )}
                                             </TableCell>
+                                            {isAdmin && (
+                                                <TableCell>
+                                                    {lead.adminReview ? (
+                                                        <Badge variant="outline" className={cn("font-normal border-0 whitespace-nowrap",
+                                                            lead.adminReview === 'Sent Message' ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" :
+                                                                lead.adminReview === 'Sent Note' ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                                                                    lead.adminReview === 'Hiring Post' ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
+                                                                        "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                                                        )}>
+                                                            {lead.adminReview}
+                                                        </Badge>
+                                                    ) : (
+                                                        <span className="text-muted-foreground text-xs italic">Not Reviewed</span>
+                                                    )}
+                                                </TableCell>
+                                            )}
                                         </TableRow>
                                     );
                                 })
