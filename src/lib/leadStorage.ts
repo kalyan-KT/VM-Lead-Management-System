@@ -311,25 +311,3 @@ export const cloneLead = async (leadId: string, token: string): Promise<Lead> =>
     throw error;
   }
 };
-
-export const checkDuplicateLead = async (linkedinPostUrl: string, token: string): Promise<{ exists: boolean; createdByName?: string; createdByEmail?: string }> => {
-  try {
-    const response = await fetch(`${API_URL}/check-duplicate?linkedinPostUrl=${encodeURIComponent(linkedinPostUrl)}`, {
-      headers: getHeaders(token),
-    });
-
-    if (!response.ok) {
-      // Assuming 404/others mean not duplicate or error, but let's parse
-      // Actually 200 OK returns { exists: false }
-      throw new Error('Failed to check duplicate');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error checking duplicate lead:', error);
-    // Fail safe: return exists false to not block user, or throw? 
-    // Safest is to allow creating if check fails (network) but maybe warn?
-    // Let's return exists: false to avoid blocking if API is down.
-    return { exists: false };
-  }
-};

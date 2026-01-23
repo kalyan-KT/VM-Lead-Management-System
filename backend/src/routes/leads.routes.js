@@ -11,7 +11,9 @@ const {
     archiveLead,
     deleteLead,
     getAdminLeadStats,
+    getAdminLeadStats,
     cloneLead,
+    checkDuplicate,
 } = require('../controllers/leads.controller');
 
 const routes = express.Router();
@@ -35,9 +37,6 @@ const upload = multer({ storage: storage });
 // Apply Auth Middleware to all API routes
 // We can apply globally or per route. Since we want all lead operations to be protected now:
 routes.use(requireAuth);
-
-// Check duplicate endpoint (Must be before /:id)
-routes.get('/check-duplicate', require('../controllers/leads.controller').checkDuplicate);
 
 // Admin Stats Route
 routes.get('/admin/lead-stats', getAdminLeadStats);
@@ -72,6 +71,7 @@ routes.get('/files/:filename', (req, res) => {
     });
 });
 
+routes.post('/check-duplicate', checkDuplicate);
 routes.route('/').get(getLeads).post(createLead);
 routes.route('/:id').get(getLead).put(updateLead).delete(deleteLead);
 routes.route('/:id/notes').post(addNote);

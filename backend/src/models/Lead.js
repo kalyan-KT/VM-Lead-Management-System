@@ -34,12 +34,6 @@ const leadSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
-    linkedinPostUrl: {
-        type: String,
-        unique: true,
-        sparse: true,
-        index: true,
-    },
     status: {
         type: String,
         required: true,
