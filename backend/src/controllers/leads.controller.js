@@ -382,25 +382,6 @@ exports.checkDuplicate = async (req, res) => {
             return res.status(400).json({ message: 'URL is required' });
         }
 
-        // Clean URL same as frontend if possible, but exact match or includes is safer
-        // Strategy: Search for URL in relevantLinks array
-        const duplicate = await Lead.findOne({
-            relevantLinks: { $elemMatch: { $regex: url, $options: 'i' } }
-        });
-
-        // Or strict check: relevantLinks: url. 
-        // User might paste query params differently. regex is better but check performance?
-        // Let's stick to exact string initially or simple partial match if needed. 
-        // Given the requirement: "same post url link".
-        // Let's use exact match + tolerant of query params? 
-        // Actually, let's look for exact match first.
-
-        // Wait, the input might be "linkedin.com/posts/xyz". The db might have "https://linkedin.com...".
-        // Better to search with regex for the core ID or just simple substring.
-
-        // Simplest: Check if 'relevantLinks' contains this specific string (partial match)
-        // const duplicate = await Lead.findOne({ relevantLinks: new RegExp(url, 'i') }); 
-
         // Check duplicate with excludeId
         const query = { relevantLinks: { $in: [url] } };
         if (excludeId) query._id = { $ne: excludeId };

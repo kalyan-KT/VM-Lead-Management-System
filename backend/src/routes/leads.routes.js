@@ -11,7 +11,7 @@ const {
     archiveLead,
     deleteLead,
     getAdminLeadStats,
-    getAdminLeadStats,
+
     cloneLead,
     checkDuplicate,
 } = require('../controllers/leads.controller');
