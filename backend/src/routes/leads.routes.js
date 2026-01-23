@@ -36,6 +36,9 @@ const upload = multer({ storage: storage });
 // We can apply globally or per route. Since we want all lead operations to be protected now:
 routes.use(requireAuth);
 
+// Check duplicate endpoint (Must be before /:id)
+routes.get('/check-duplicate', require('../controllers/leads.controller').checkDuplicate);
+
 // Admin Stats Route
 routes.get('/admin/lead-stats', getAdminLeadStats);
 

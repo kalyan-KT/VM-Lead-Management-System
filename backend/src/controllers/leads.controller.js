@@ -13,6 +13,53 @@ const verifyAdmin = async (userId) => {
     }
 };
 
+// @desc    Check for duplicate LinkedIn Post URL
+// @route   GET /api/leads/check-duplicate
+// @access  Private
+exports.checkDuplicate = async (req, res) => {
+    try {
+        const { linkedinPostUrl } = req.query;
+        if (!linkedinPostUrl) {
+            return res.status(400).json({ message: 'LinkedIn Post URL is required' });
+        }
+
+        const normalizedUrl = linkedinPostUrl.trim();
+        const existingLead = await Lead.findOne({ linkedinPostUrl: normalizedUrl });
+
+        if (existingLead) {
+            let createdByName = 'Unknown';
+            if (existingLead.creatorEmail) {
+                // If we have email, maybe we can fetch name from Clerk? 
+                // Or just return email if name is missing from lead.createdByName (which we don't store yet)
+                createdByName = existingLead.creatorEmail;
+            } else if (existingLead.createdBy) {
+                createdByName = 'User ' + existingLead.createdBy.slice(-4);
+            }
+
+            // Try to fetch user details from Clerk if we have ID
+            if (existingLead.createdBy) {
+                try {
+                    const user = await clerkClient.users.getUser(existingLead.createdBy);
+                    createdByName = `${user.firstName} ${user.lastName}`;
+                } catch (err) {
+                    console.log('Failed to fetch user details for duplicate check', err);
+                }
+            }
+
+            return res.json({
+                exists: true,
+                createdByName: createdByName,
+                createdByEmail: existingLead.creatorEmail
+            });
+        }
+
+        res.json({ exists: false });
+    } catch (error) {
+        console.error('Error checking duplicate:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // @desc    Get all leads (Admin sees all, User sees own)
 // @route   GET /api/leads
 // @access  Private
@@ -53,7 +100,10 @@ exports.createLead = async (req, res) => {
 
         const leadData = {
             ...req.body,
+            ...req.body,
             createdBy: userId,
+            // Extract and save linkedinPostUrl explicitly if present in relevantLinks for indexing
+            linkedinPostUrl: (req.body.relevantLinks || []).find(l => l.includes('linkedin.com/posts/') || l.includes('linkedin.com/feed/update/')) || undefined
         };
 
         const lead = await Lead.create(leadData);
