@@ -68,6 +68,9 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete, on
   const [priority, setPriority] = useState<LeadPriority>('Medium');
   const [dateError, setDateError] = useState('');
 
+  const [adminReview, setAdminReview] = useState<string | undefined>(undefined);
+  const [adminReviewNote, setAdminReviewNote] = useState('');
+
   // File Preview State
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
 
@@ -78,6 +81,8 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete, on
       setNextActionDate(lead.nextActionDate || '');
       setStatus(lead.status);
       setPriority(lead.priority);
+      setAdminReview(lead.adminReview);
+      setAdminReviewNote(lead.adminReviewNote || '');
     }
   }, [lead]);
 
@@ -137,6 +142,7 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete, on
       status,
       priority,
       lastContactedAt: lead.status !== status ? new Date().toISOString() : lead.lastContactedAt,
+      ...(adminReview ? { adminReview: adminReview as any, adminReviewNote } : {}),
     });
     onClose();
   };
@@ -412,6 +418,41 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete, on
               />
               {dateError && <p className="text-xs text-destructive">{dateError}</p>}
             </div>
+
+            {/* Admin Review in Detail View */}
+            {user?.publicMetadata?.role === 'admin' && (
+              <div className="space-y-4 pt-4 border-t">
+                <Label className="text-base font-semibold">Admin Review</Label>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <Label>Review Status</Label>
+                    <Select value={adminReview || ''} onValueChange={setAdminReview}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Action" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Sent Message">Sent Message</SelectItem>
+                        <SelectItem value="Sent Note">Sent Note</SelectItem>
+                        <SelectItem value="Hiring Post">Hiring Post (Rejected)</SelectItem>
+                        <SelectItem value="Rejected">Rejected</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {(adminReview === 'Other' || adminReview === 'Rejected') && (
+                    <div className="space-y-2">
+                      <Label>{adminReview === 'Rejected' ? 'Rejection Reason' : 'Admin Review Note'}</Label>
+                      <Textarea
+                        value={adminReviewNote}
+                        onChange={(e) => setAdminReviewNote(e.target.value)}
+                        placeholder={adminReview === 'Rejected' ? "Enter reason for rejection..." : "Enter admin review note..."}
+                        rows={2}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {!isLocked && (
               <Button onClick={handleSaveFollowUp} className="w-full">
