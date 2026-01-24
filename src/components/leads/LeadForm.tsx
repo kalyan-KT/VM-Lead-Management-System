@@ -428,13 +428,13 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
                     </SelectContent>
                   </Select>
                 </div>
-                {adminReview === 'Other' && (
+                {(adminReview === 'Other' || adminReview === 'Rejected') && (
                   <div className="space-y-2">
-                    <Label>Admin Review Note</Label>
+                    <Label>{adminReview === 'Rejected' ? 'Rejection Reason' : 'Admin Review Note'}</Label>
                     <Textarea
                       value={adminReviewNote}
                       onChange={(e) => setAdminReviewNote(e.target.value)}
-                      placeholder="Enter admin review note..."
+                      placeholder={adminReview === 'Rejected' ? "Enter reason for rejection..." : "Enter admin review note..."}
                       rows={2}
                     />
                   </div>
