@@ -51,7 +51,7 @@ export interface Lead {
   createdAt: string;
   lastContactedAt: string;
   // Admin Review
-  adminReview?: 'Sent Message' | 'Sent Note' | 'Hiring Post' | 'Other';
+  adminReview?: 'Sent Message' | 'Sent Note' | 'Hiring Post' | 'Rejected' | 'Other';
   adminReviewNote?: string;
 }
 

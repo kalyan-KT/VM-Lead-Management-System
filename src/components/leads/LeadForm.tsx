@@ -218,7 +218,7 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
         : existingLead?.lastContactedAt || new Date().toISOString(),
       createdBy: existingLead?.createdBy || '',
       creatorEmail: existingLead?.creatorEmail,
-      ...(isAdmin ? { adminReview: adminReview as any, adminReviewNote } : {}),
+      ...(adminReview ? { adminReview: adminReview as any, adminReviewNote } : {}),
     };
 
     onSave(lead);
@@ -423,6 +423,7 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
                       <SelectItem value="Sent Message">Sent Message</SelectItem>
                       <SelectItem value="Sent Note">Sent Note</SelectItem>
                       <SelectItem value="Hiring Post">Hiring Post (Rejected)</SelectItem>
+                      <SelectItem value="Rejected">Rejected</SelectItem>
                       <SelectItem value="Other">Other</SelectItem>
                     </SelectContent>
                   </Select>

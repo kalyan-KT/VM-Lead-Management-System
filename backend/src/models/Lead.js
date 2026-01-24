@@ -67,7 +67,7 @@ const leadSchema = new mongoose.Schema({
     // Admin Review Fields
     adminReview: {
         type: String,
-        enum: ['Sent Message', 'Sent Note', 'Hiring Post', 'Other'],
+        enum: ['Sent Message', 'Sent Note', 'Hiring Post', 'Rejected', 'Other'],
         default: null,
     },
     adminReviewNote: {
