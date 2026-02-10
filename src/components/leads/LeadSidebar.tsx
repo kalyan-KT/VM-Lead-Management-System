@@ -79,7 +79,7 @@ export function LeadSidebar({
 
   const navItems = [
     { id: 'all' as ViewFilter, label: 'Dashboard', icon: LayoutDashboard, count: counts.all },
-    { id: 'table' as ViewFilter, label: 'Table View', icon: Table, count: counts.all },
+    { id: 'table' as ViewFilter, label: 'Table Views', icon: Table, count: counts.all },
     { id: 'overdue' as ViewFilter, label: 'Overdue', icon: AlertCircle, count: counts.overdue, danger: true },
     { id: 'today' as ViewFilter, label: "Today's Follow-ups", icon: Flame, count: counts.today, warning: true },
     { id: 'active' as ViewFilter, label: 'Active Leads', icon: Users, count: counts.active },
