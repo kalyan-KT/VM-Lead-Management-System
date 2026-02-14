@@ -62,6 +62,19 @@ export const getLeads = async (token?: string): Promise<Lead[]> => {
   }
 };
 
+export const getWebsiteLeads = async (token?: string): Promise<Lead[]> => {
+  try {
+    const response = await fetch(`${API_URL}/website`, {
+      headers: getHeaders(token),
+    });
+    if (!response.ok) throw new Error('Failed to fetch website leads');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching website leads:', error);
+    return [];
+  }
+};
+
 export const saveLead = async (lead: Lead, token?: string): Promise<Lead> => {
   try {
     // Determine if create or update based on ID format (simple heuristic)

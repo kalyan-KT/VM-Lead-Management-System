@@ -14,6 +14,7 @@ const {
 
     cloneLead,
     checkDuplicate,
+    getWebsiteLeads, // Import new function
 } = require('../controllers/leads.controller');
 
 const routes = express.Router();
@@ -72,6 +73,7 @@ routes.get('/files/:filename', (req, res) => {
 });
 
 routes.post('/check-duplicate', checkDuplicate);
+routes.get('/website', getWebsiteLeads); // New Route BEFORE /:id
 routes.route('/').get(getLeads).post(createLead);
 routes.route('/:id').get(getLead).put(updateLead).delete(deleteLead);
 routes.route('/:id/notes').post(addNote);

@@ -1,4 +1,5 @@
 const Lead = require('../models/Lead');
+const WebsiteLead = require('../models/WebsiteLead'); // Import new model
 const { clerkClient } = require('@clerk/clerk-sdk-node');
 
 // Helper to verify Admin role securely
@@ -32,7 +33,10 @@ exports.getLeads = async (req, res) => {
             query.createdBy = userId;
         }
 
-        const leads = await Lead.find(query).sort({ createdAt: -1 });
+        let leads = await Lead.find(query).sort({ createdAt: -1 });
+
+        // If Admin, leads variable already contains LMS leads from Lead.find()
+        // We do NOT merge Website leads anymore. Separate endpoint exists.
 
         res.status(200).json(leads);
     } catch (error) {
@@ -69,16 +73,52 @@ exports.createLead = async (req, res) => {
 // @access  Private
 exports.getLead = async (req, res) => {
     try {
-        const lead = await Lead.findById(req.params.id);
+        const { userId, sessionClaims } = req.auth;
+        let isAdmin = sessionClaims?.metadata?.role === 'admin';
+        if (!isAdmin) {
+            isAdmin = await verifyAdmin(userId);
+        }
+
+        let lead = await Lead.findById(req.params.id);
+        let isWebsite = false;
+
+        // Failover to Website Leads for Admins
+        if (!lead && isAdmin && WebsiteLead) {
+            const webLead = await WebsiteLead.findById(req.params.id);
+            if (webLead) {
+                isWebsite = true;
+                const wl = webLead.toObject();
+                // Map to Lead structure
+                lead = {
+                    ...wl,
+                    id: wl._id.toString(),
+                    source: 'Website',
+                    status: wl.status || 'New',
+                    primaryContact: wl.email,
+                    contextNote: `Message: ${wl.message || ''}\nPhone: ${wl.phone || ''}`,
+                    company: wl.company || '',
+                    service: wl.service || '',
+                    budget: wl.budget || '',
+                    division: (wl.division && wl.division.includes('Studio')) ? 'Studio' : 'Services',
+                    phone: wl.phone || '',
+                    isWebsiteLead: true,
+                    tags: [],
+                    notes: [],
+                    relevantLinks: [],
+                    documents: [],
+                    followUps: [],
+                    meetingNotes: [],
+                    createdBy: 'system'
+                };
+            }
+        }
+
         if (!lead) {
             return res.status(404).json({ message: 'Lead not found' });
         }
 
-        // Access control
-        const { userId, sessionClaims } = req.auth;
-        const isAdmin = sessionClaims?.metadata?.role === 'admin';
-
-        if (!isAdmin && lead.createdBy && lead.createdBy !== userId) {
+        // Access control (already handled failover for admin)
+        if (!isAdmin && !isWebsite && lead.createdBy && lead.createdBy !== userId) {
             return res.status(403).json({ message: 'Not authorized to view this lead' });
         }
 
@@ -93,46 +133,85 @@ exports.getLead = async (req, res) => {
 // @access  Private
 exports.updateLead = async (req, res) => {
     try {
-        // Check ownership before update
-        const existingLead = await Lead.findById(req.params.id);
-        if (!existingLead) {
-            return res.status(404).json({ message: 'Lead not found' });
-        }
-
         const { userId, sessionClaims } = req.auth;
         let isAdmin = sessionClaims?.metadata?.role === 'admin';
-
         // Check fresh verification if token says not admin
         if (!isAdmin) {
             isAdmin = await verifyAdmin(userId);
         }
 
-        if (!isAdmin && existingLead.createdBy && existingLead.createdBy !== userId) {
+        let existingLead = await Lead.findById(req.params.id);
+        let isWebsite = false;
+
+        // Failover check for Website Leads (Admin only)
+        if (!existingLead && isAdmin && WebsiteLead) {
+            const webInfo = await WebsiteLead.findById(req.params.id);
+            if (webInfo) {
+                existingLead = webInfo;
+                isWebsite = true;
+            }
+        }
+
+        if (!existingLead) {
+            return res.status(404).json({ message: 'Lead not found' });
+        }
+
+        if (!isAdmin && !isWebsite && existingLead.createdBy && existingLead.createdBy !== userId) {
             return res.status(403).json({ message: 'Not authorized to update this lead' });
         }
 
-        // Admin Review Protection: Non-admins cannot update adminReview fields
+        // Admin Review Protection
         if (!isAdmin && (req.body.adminReview !== undefined || req.body.adminReviewNote !== undefined)) {
             return res.status(403).json({ message: 'Access denied: Only admins can update Admin Review fields' });
         }
 
-        // Clean up body to prevent updating immutable fields
         const updates = { ...req.body };
         delete updates._id;
         delete updates.id;
         delete updates.createdAt;
         delete updates.updatedAt;
-        // delete updates.createdBy; // Optionally preserve owner, but generally shouldn't change here.
-
-        // Prevent notes from being overwritten by updateLead - notes should be append-only via addNote
         delete updates.notes;
 
-        const lead = await Lead.findByIdAndUpdate(req.params.id, updates, {
-            new: true,
-            runValidators: true,
-        });
+        let updatedLead;
+        if (isWebsite) {
+            // Handle Website Lead Update (Mapping back fields if needed)
+            // Primarily we update status and maybe notes if mapped back?
+            // WebsiteLead schema is loose/strict: false.
+            updatedLead = await WebsiteLead.findByIdAndUpdate(req.params.id, updates, {
+                new: true,
+                runValidators: false,
+            });
+            // Return mapped format
+            const ul = updatedLead.toObject();
+            updatedLead = {
+                ...ul,
+                id: ul._id.toString(),
+                source: 'Website', // Keep source fixed
+                status: ul.status || 'New',
+                primaryContact: ul.email,
+                contextNote: `Message: ${ul.message || ''}\nPhone: ${ul.phone || ''}`,
+                company: ul.company || '',
+                service: ul.service || '',
+                budget: ul.budget || '',
+                division: (ul.division && ul.division.includes('Studio')) ? 'Studio' : 'Services',
+                phone: ul.phone || '',
+                isWebsiteLead: true,
+                tags: [],
+                notes: [],
+                relevantLinks: [],
+                documents: [],
+                followUps: [],
+                meetingNotes: [],
+                createdBy: 'system'
+            };
+        } else {
+            updatedLead = await Lead.findByIdAndUpdate(req.params.id, updates, {
+                new: true,
+                runValidators: true,
+            });
+        }
 
-        res.status(200).json(lead);
+        res.status(200).json(updatedLead);
     } catch (error) {
         console.error('Error updating lead:', error);
         res.status(400).json({ message: error.message });
@@ -301,18 +380,31 @@ exports.archiveLead = async (req, res) => {
 // @access  Private
 exports.deleteLead = async (req, res) => {
     try {
-        const lead = await Lead.findById(req.params.id);
+        const { userId, sessionClaims } = req.auth;
+        let isAdmin = sessionClaims?.metadata?.role === 'admin';
+        if (!isAdmin) isAdmin = await verifyAdmin(userId);
+
+        let lead = await Lead.findById(req.params.id);
+        let isWebsite = false;
+
+        if (!lead && isAdmin && WebsiteLead) {
+            lead = await WebsiteLead.findById(req.params.id);
+            if (lead) isWebsite = true;
+        }
+
         if (!lead) {
             return res.status(404).json({ message: 'Lead not found' });
         }
 
-        const { userId, sessionClaims } = req.auth;
-        const isAdmin = sessionClaims?.metadata?.role === 'admin';
-        if (!isAdmin && lead.createdBy && lead.createdBy !== userId) {
+        if (!isAdmin && !isWebsite && lead.createdBy && lead.createdBy !== userId) {
             return res.status(403).json({ message: 'Not authorized' });
         }
 
-        await Lead.deleteOne({ _id: req.params.id });
+        if (isWebsite) {
+            await WebsiteLead.deleteOne({ _id: req.params.id });
+        } else {
+            await Lead.deleteOne({ _id: req.params.id });
+        }
 
         res.status(200).json({ message: 'Lead deleted successfully' });
     } catch (error) {
@@ -398,6 +490,65 @@ exports.checkDuplicate = async (req, res) => {
         return res.status(200).json({ exists: false });
     } catch (error) {
         console.error('Error checking duplicate:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get website leads (Admin only)
+// @route   GET /api/leads/website
+// @access  Private (Admin only)
+exports.getWebsiteLeads = async (req, res) => {
+    try {
+        const { userId, sessionClaims } = req.auth;
+        let isAdmin = sessionClaims?.metadata?.role === 'admin';
+
+        // Helper to verify Admin role securely
+        if (!isAdmin) {
+            isAdmin = await verifyAdmin(userId);
+        }
+
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'Access denied: Admin only' });
+        }
+
+        if (!WebsiteLead) {
+            return res.status(503).json({ message: 'Website Database not connected' });
+        }
+
+        const webLeads = await WebsiteLead.find({}).sort({ createdAt: -1 });
+
+        // Map Website Leads to match the LMS Lead structure
+        const formattedWebLeads = webLeads.map(lead => {
+            const webLead = lead.toObject();
+            return {
+                ...webLead,
+                id: webLead._id.toString(),
+                source: 'Website',
+                status: webLead.status || 'New',
+                primaryContact: webLead.email, // Use email as primary contact
+                contextNote: `Message: ${webLead.message || ''}\nPhone: ${webLead.phone || ''}`, // Reduced contextNote as fields are now explicit
+                // Explicit fields for UI
+                company: webLead.company || '',
+                service: webLead.service || '',
+                budget: webLead.budget || '',
+                // Simplify division: "Venturemond Services..." -> "Services", "Venturemond Studio..." -> "Studio"
+                division: (webLead.division && webLead.division.includes('Studio')) ? 'Studio' : 'Services',
+                phone: webLead.phone || '', // Keep phone accessible
+
+                isWebsiteLead: true,
+                tags: [],
+                notes: [],
+                relevantLinks: [],
+                documents: [],
+                followUps: [],
+                meetingNotes: [],
+                createdBy: 'system'
+            };
+        });
+
+        res.status(200).json(formattedWebLeads);
+    } catch (error) {
+        console.error('Error fetching website leads:', error);
         res.status(500).json({ message: error.message });
     }
 };

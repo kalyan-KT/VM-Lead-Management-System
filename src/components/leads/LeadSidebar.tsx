@@ -19,7 +19,8 @@ import {
   LayoutDashboard,
   X,
   Table,
-  Settings
+  Settings,
+  Globe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LeadFilters } from './LeadFilters';
@@ -88,6 +89,8 @@ export function LeadSidebar({
 
   // Admin Link
   if (user?.publicMetadata?.role === 'admin') {
+    // @ts-expect-error - Adding custom view type for navigation
+    navItems.push({ id: 'website_leads', label: 'Website Leads', icon: Globe, count: 0, hideCount: true });
     // @ts-expect-error - Adding custom view type for navigation
     navItems.push({ id: 'users', label: 'Manage Users', icon: Settings, count: 0, hideCount: true });
   }

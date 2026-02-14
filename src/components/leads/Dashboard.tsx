@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Lead, ViewFilter } from '@/types/lead';
-import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead, getAdminLeadStats, AdminLeadStat, getAdminDashboardStats, AdminDashboardStats as AdminStatsType, cloneLead } from '@/lib/leadStorage';
+import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead, getAdminLeadStats, AdminLeadStat, getAdminDashboardStats, AdminDashboardStats as AdminStatsType, cloneLead, getWebsiteLeads } from '@/lib/leadStorage';
 import { LeadCard } from './LeadCard';
 import { LeadTable } from './LeadTable';
 import { LeadForm } from './LeadForm';
@@ -9,6 +9,7 @@ import { LeadSidebar } from './LeadSidebar';
 import { DashboardStats } from './DashboardStats';
 import { UserLeadActivity } from './UserLeadActivity';
 import { AdminDashboardStats } from './AdminDashboardStats';
+import { WebsiteLeadsView } from './WebsiteLeadsView';
 import ManageUsers from '@/pages/ManageUsers';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -24,6 +25,7 @@ export function Dashboard() {
   const { getToken } = useAuth();
   const { user } = useUser();
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [websiteLeads, setWebsiteLeads] = useState<Lead[]>([]); // Website Leads State
   const [activeView, setActiveView] = useState<ViewFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
@@ -59,11 +61,34 @@ export function Dashboard() {
 
           const dashboardStats = await getAdminDashboardStats(token);
           setAdminDashboardStats(dashboardStats);
+
+          // Fetch Website Leads
+          const webLeads = await getWebsiteLeads(token);
+          setWebsiteLeads(webLeads);
         }
       };
       fetchAdminData();
     }
-  }, [isAdmin, getToken, leads]); // Re-fetch stats when leads change
+  }, [isAdmin, getToken, leads]); // Re-fetch stats when leads change (maybe add activeView dependency later)
+
+  // Real-time Poll for Website Leads
+  useEffect(() => {
+    if (isAdmin && activeView === 'website_leads') {
+      const fetchWebLeads = async () => {
+        try {
+          const token = await getToken();
+          const webLeads = await getWebsiteLeads(token);
+          setWebsiteLeads(webLeads);
+        } catch (error) {
+          console.error("Polling website leads failed", error);
+        }
+      };
+
+      fetchWebLeads(); // Fetch immediately on view switch
+      const interval = setInterval(fetchWebLeads, 5000); // Poll every 5 seconds
+      return () => clearInterval(interval);
+    }
+  }, [isAdmin, activeView, getToken]);
 
   const handleCardAction = (action: string) => {
     if (action === 'hot') {
@@ -143,6 +168,15 @@ export function Dashboard() {
       } catch (wsError) {
         console.error("Failed to refresh leads", wsError);
       }
+
+      // Refresh Website Leads if Admin
+      if (isAdmin) {
+        try {
+          const token = await getToken();
+          const webLeads = await getWebsiteLeads(token || undefined);
+          setWebsiteLeads(webLeads);
+        } catch (e) { console.error("Failed to refresh website leads", e); }
+      }
     }
   };
 
@@ -159,6 +193,12 @@ export function Dashboard() {
       setLeads(data);
       // Update selected lead to match the FRESH data from server/utils
       setSelectedLead(updatedLead);
+
+      // Refresh Website Leads if Admin (in case we updated one)
+      if (isAdmin) {
+        const webLeads = await getWebsiteLeads(token || undefined);
+        setWebsiteLeads(webLeads);
+      }
     } catch (error) {
       console.error("Failed to update lead", error);
       alert(error instanceof Error ? error.message : "Failed to update lead changes.");
@@ -247,6 +287,8 @@ export function Dashboard() {
           result = result.filter((l) => l.createdBy === selectedUserForLeads.id);
         }
         break;
+      case 'website_leads':
+        return websiteLeads; // Return website leads directly (add search/filters here if desired)
     }
 
     return result;
@@ -401,7 +443,10 @@ export function Dashboard() {
               {activeView === 'today' && "Today's Follow-ups"}
               {activeView === 'active' && 'Active Leads'}
               {activeView === 'closed' && 'Closed / Dropped'}
+              {activeView === 'active' && 'Active Leads'}
+              {activeView === 'closed' && 'Closed / Dropped'}
               {activeView === 'users' && 'User Management'}
+              {activeView === 'website_leads' && 'Website Leads'}
               {activeView === 'user_leads' && (
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="icon" onClick={() => setActiveView('all')} className="-ml-2 h-8 w-8">
@@ -450,6 +495,12 @@ export function Dashboard() {
         <div className="p-6">
           {activeView === 'users' ? (
             <ManageUsers />
+          ) : activeView === 'website_leads' ? (
+            <WebsiteLeadsView
+              leads={websiteLeads}
+              onUpdateLead={handleUpdateLead}
+              onDeleteLead={handleDeleteLead}
+            />
           ) : activeView === 'table' || activeView === 'user_leads' ? (
             <LeadTable leads={filteredLeads} onLeadClick={handleLeadClick} />
           ) : activeView === 'all' && groupedLeads ? (
