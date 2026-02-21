@@ -1,5 +1,6 @@
 const Lead = require('../models/Lead');
 const WebsiteLead = require('../models/WebsiteLead'); // Import new model
+const StacliLead = require('../models/StacliLead'); // Import Stacli model
 const { clerkClient } = require('@clerk/clerk-sdk-node');
 
 // Helper to verify Admin role securely
@@ -113,6 +114,38 @@ exports.getLead = async (req, res) => {
             }
         }
 
+        // Failover to Stacli Leads for Admins
+        if (!lead && isAdmin && StacliLead) {
+            const stacliLead = await StacliLead.findById(req.params.id);
+            if (stacliLead) {
+                isWebsite = true;
+                const sl = stacliLead.toObject();
+                // Map to Lead structure
+                lead = {
+                    ...sl,
+                    id: sl._id.toString(),
+                    source: 'Website', // Or differentiate as 'Stacli Website' if preferred, keeping consistent with Website
+                    status: sl.status || 'New',
+                    primaryContact: sl.email,
+                    contextNote: `Interested in: ${sl['What are you interested in?'] || sl.interest || ''}\nProject Brief: ${sl['Brief About Your Project'] || sl.projectBrief || sl.message || ''}`,
+                    company: sl['Company / Startup Name / Individual'] || sl.company || '',
+                    service: sl['Choose a Service'] || sl.service || '',
+                    budget: sl['Budget Range'] || sl.budget || '',
+                    division: sl['What are you interested in?'] || sl.interest || 'Stacli',
+                    phone: sl.phone || '',
+                    isWebsiteLead: true,
+                    isStacliLead: true,
+                    tags: [],
+                    notes: [],
+                    relevantLinks: [],
+                    documents: [],
+                    followUps: [],
+                    meetingNotes: [],
+                    createdBy: 'system'
+                };
+            }
+        }
+
         if (!lead) {
             return res.status(404).json({ message: 'Lead not found' });
         }
@@ -142,6 +175,7 @@ exports.updateLead = async (req, res) => {
 
         let existingLead = await Lead.findById(req.params.id);
         let isWebsite = false;
+        let isStacli = false;
 
         // Failover check for Website Leads (Admin only)
         if (!existingLead && isAdmin && WebsiteLead) {
@@ -149,6 +183,16 @@ exports.updateLead = async (req, res) => {
             if (webInfo) {
                 existingLead = webInfo;
                 isWebsite = true;
+            }
+        }
+
+        // Failover check for Stacli Leads
+        if (!existingLead && isAdmin && StacliLead) {
+            const stacliInfo = await StacliLead.findById(req.params.id);
+            if (stacliInfo) {
+                existingLead = stacliInfo;
+                isWebsite = true;
+                isStacli = true;
             }
         }
 
@@ -174,36 +218,66 @@ exports.updateLead = async (req, res) => {
 
         let updatedLead;
         if (isWebsite) {
-            // Handle Website Lead Update (Mapping back fields if needed)
-            // Primarily we update status and maybe notes if mapped back?
-            // WebsiteLead schema is loose/strict: false.
-            updatedLead = await WebsiteLead.findByIdAndUpdate(req.params.id, updates, {
-                new: true,
-                runValidators: false,
-            });
-            // Return mapped format
-            const ul = updatedLead.toObject();
-            updatedLead = {
-                ...ul,
-                id: ul._id.toString(),
-                source: 'Website', // Keep source fixed
-                status: ul.status || 'New',
-                primaryContact: ul.email,
-                contextNote: `Message: ${ul.message || ''}\nPhone: ${ul.phone || ''}`,
-                company: ul.company || '',
-                service: ul.service || '',
-                budget: ul.budget || '',
-                division: (ul.division && ul.division.includes('Studio')) ? 'Studio' : 'Services',
-                phone: ul.phone || '',
-                isWebsiteLead: true,
-                tags: [],
-                notes: [],
-                relevantLinks: [],
-                documents: [],
-                followUps: [],
-                meetingNotes: [],
-                createdBy: 'system'
-            };
+            if (isStacli) {
+                updatedLead = await StacliLead.findByIdAndUpdate(req.params.id, updates, {
+                    new: true,
+                    runValidators: false,
+                });
+                const sl = updatedLead.toObject();
+                updatedLead = {
+                    ...sl,
+                    id: sl._id.toString(),
+                    source: 'Website',
+                    status: sl.status || 'New',
+                    primaryContact: sl.email,
+                    contextNote: `Interested in: ${sl['What are you interested in?'] || sl.interest || ''}\nProject Brief: ${sl['Brief About Your Project'] || sl.projectBrief || sl.message || ''}`,
+                    company: sl['Company / Startup Name / Individual'] || sl.company || '',
+                    service: sl['Choose a Service'] || sl.service || '',
+                    budget: sl['Budget Range'] || sl.budget || '',
+                    division: sl['What are you interested in?'] || sl.interest || 'Stacli',
+                    phone: sl.phone || '',
+                    isWebsiteLead: true,
+                    isStacliLead: true,
+                    tags: [],
+                    notes: [],
+                    relevantLinks: [],
+                    documents: [],
+                    followUps: [],
+                    meetingNotes: [],
+                    createdBy: 'system'
+                };
+            } else {
+                // Handle Website Lead Update (Mapping back fields if needed)
+                // Primarily we update status and maybe notes if mapped back?
+                // WebsiteLead schema is loose/strict: false.
+                updatedLead = await WebsiteLead.findByIdAndUpdate(req.params.id, updates, {
+                    new: true,
+                    runValidators: false,
+                });
+                // Return mapped format
+                const ul = updatedLead.toObject();
+                updatedLead = {
+                    ...ul,
+                    id: ul._id.toString(),
+                    source: 'Website', // Keep source fixed
+                    status: ul.status || 'New',
+                    primaryContact: ul.email,
+                    contextNote: `Message: ${ul.message || ''}\nPhone: ${ul.phone || ''}`,
+                    company: ul.company || '',
+                    service: ul.service || '',
+                    budget: ul.budget || '',
+                    division: (ul.division && ul.division.includes('Studio')) ? 'Studio' : 'Services',
+                    phone: ul.phone || '',
+                    isWebsiteLead: true,
+                    tags: [],
+                    notes: [],
+                    relevantLinks: [],
+                    documents: [],
+                    followUps: [],
+                    meetingNotes: [],
+                    createdBy: 'system'
+                };
+            }
         } else {
             updatedLead = await Lead.findByIdAndUpdate(req.params.id, updates, {
                 new: true,
@@ -386,10 +460,19 @@ exports.deleteLead = async (req, res) => {
 
         let lead = await Lead.findById(req.params.id);
         let isWebsite = false;
+        let isStacli = false;
 
         if (!lead && isAdmin && WebsiteLead) {
             lead = await WebsiteLead.findById(req.params.id);
             if (lead) isWebsite = true;
+        }
+
+        if (!lead && isAdmin && StacliLead) {
+            lead = await StacliLead.findById(req.params.id);
+            if (lead) {
+                isWebsite = true;
+                isStacli = true;
+            }
         }
 
         if (!lead) {
@@ -401,7 +484,11 @@ exports.deleteLead = async (req, res) => {
         }
 
         if (isWebsite) {
-            await WebsiteLead.deleteOne({ _id: req.params.id });
+            if (isStacli) {
+                await StacliLead.deleteOne({ _id: req.params.id });
+            } else {
+                await WebsiteLead.deleteOne({ _id: req.params.id });
+            }
         } else {
             await Lead.deleteOne({ _id: req.params.id });
         }
@@ -549,6 +636,63 @@ exports.getWebsiteLeads = async (req, res) => {
         res.status(200).json(formattedWebLeads);
     } catch (error) {
         console.error('Error fetching website leads:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get stacli website leads (Admin only)
+// @route   GET /api/leads/stacli
+// @access  Private (Admin only)
+exports.getStacliLeads = async (req, res) => {
+    try {
+        const { userId, sessionClaims } = req.auth;
+        let isAdmin = sessionClaims?.metadata?.role === 'admin';
+
+        // Helper to verify Admin role securely
+        if (!isAdmin) {
+            isAdmin = await verifyAdmin(userId);
+        }
+
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'Access denied: Admin only' });
+        }
+
+        if (!StacliLead) {
+            return res.status(503).json({ message: 'Website Database not connected for Stacli' });
+        }
+
+        const stacliLeads = await StacliLead.find({}).sort({ createdAt: -1 });
+
+        // Map Stacli Leads to match the LMS Lead structure
+        const formattedStacliLeads = stacliLeads.map(lead => {
+            const sl = lead.toObject();
+            return {
+                ...sl,
+                id: sl._id.toString(),
+                source: 'Website',
+                status: sl.status || 'New',
+                primaryContact: sl.email,
+                contextNote: `Interested in: ${sl['What are you interested in?'] || sl.interest || ''}\nProject Brief: ${sl['Brief About Your Project'] || sl.projectBrief || sl.message || ''}`,
+                company: sl['Company / Startup Name / Individual'] || sl.company || '',
+                service: sl['Choose a Service'] || sl.service || '',
+                budget: sl['Budget Range'] || sl.budget || '',
+                division: sl['What are you interested in?'] || sl.interest || 'Stacli',
+                phone: sl.phone || '',
+                isWebsiteLead: true,
+                isStacliLead: true,
+                tags: [],
+                notes: [],
+                relevantLinks: [],
+                documents: [],
+                followUps: [],
+                meetingNotes: [],
+                createdBy: 'system'
+            };
+        });
+
+        res.status(200).json(formattedStacliLeads);
+    } catch (error) {
+        console.error('Error fetching stacli leads:', error);
         res.status(500).json({ message: error.message });
     }
 };

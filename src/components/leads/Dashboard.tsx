@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Lead, ViewFilter } from '@/types/lead';
-import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead, getAdminLeadStats, AdminLeadStat, getAdminDashboardStats, AdminDashboardStats as AdminStatsType, cloneLead, getWebsiteLeads } from '@/lib/leadStorage';
+import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead, getAdminLeadStats, AdminLeadStat, getAdminDashboardStats, AdminDashboardStats as AdminStatsType, cloneLead, getWebsiteLeads, getStacliLeads } from '@/lib/leadStorage';
 import { LeadCard } from './LeadCard';
 import { LeadTable } from './LeadTable';
 import { LeadForm } from './LeadForm';
@@ -26,6 +26,7 @@ export function Dashboard() {
   const { user } = useUser();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [websiteLeads, setWebsiteLeads] = useState<Lead[]>([]); // Website Leads State
+  const [stacliLeads, setStacliLeads] = useState<Lead[]>([]); // Stacli Leads State
   const [activeView, setActiveView] = useState<ViewFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
@@ -65,27 +66,36 @@ export function Dashboard() {
           // Fetch Website Leads
           const webLeads = await getWebsiteLeads(token);
           setWebsiteLeads(webLeads);
+
+          // Fetch Stacli Leads
+          const stacliRes = await getStacliLeads(token);
+          setStacliLeads(stacliRes);
         }
       };
       fetchAdminData();
     }
   }, [isAdmin, getToken, leads]); // Re-fetch stats when leads change (maybe add activeView dependency later)
 
-  // Real-time Poll for Website Leads
+  // Real-time Poll for Website / Stacli Leads
   useEffect(() => {
-    if (isAdmin && activeView === 'website_leads') {
-      const fetchWebLeads = async () => {
+    if (isAdmin && (activeView === 'website_leads' || activeView === 'stacli_leads')) {
+      const fetchExternalLeads = async () => {
         try {
           const token = await getToken();
-          const webLeads = await getWebsiteLeads(token);
-          setWebsiteLeads(webLeads);
+          if (activeView === 'website_leads') {
+            const webLeads = await getWebsiteLeads(token);
+            setWebsiteLeads(webLeads);
+          } else if (activeView === 'stacli_leads') {
+            const stacliResp = await getStacliLeads(token);
+            setStacliLeads(stacliResp);
+          }
         } catch (error) {
-          console.error("Polling website leads failed", error);
+          console.error(`Polling ${activeView} failed`, error);
         }
       };
 
-      fetchWebLeads(); // Fetch immediately on view switch
-      const interval = setInterval(fetchWebLeads, 5000); // Poll every 5 seconds
+      fetchExternalLeads(); // Fetch immediately on view switch
+      const interval = setInterval(fetchExternalLeads, 5000); // Poll every 5 seconds
       return () => clearInterval(interval);
     }
   }, [isAdmin, activeView, getToken]);
@@ -169,13 +179,15 @@ export function Dashboard() {
         console.error("Failed to refresh leads", wsError);
       }
 
-      // Refresh Website Leads if Admin
+      // Refresh Website & Stacli Leads if Admin
       if (isAdmin) {
         try {
           const token = await getToken();
           const webLeads = await getWebsiteLeads(token || undefined);
           setWebsiteLeads(webLeads);
-        } catch (e) { console.error("Failed to refresh website leads", e); }
+          const stacliResp = await getStacliLeads(token || undefined);
+          setStacliLeads(stacliResp);
+        } catch (e) { console.error("Failed to refresh external leads", e); }
       }
     }
   };
@@ -194,10 +206,12 @@ export function Dashboard() {
       // Update selected lead to match the FRESH data from server/utils
       setSelectedLead(updatedLead);
 
-      // Refresh Website Leads if Admin (in case we updated one)
+      // Refresh Website/Stacli Leads if Admin (in case we updated one)
       if (isAdmin) {
         const webLeads = await getWebsiteLeads(token || undefined);
         setWebsiteLeads(webLeads);
+        const stacliResp = await getStacliLeads(token || undefined);
+        setStacliLeads(stacliResp);
       }
     } catch (error) {
       console.error("Failed to update lead", error);
@@ -288,7 +302,9 @@ export function Dashboard() {
         }
         break;
       case 'website_leads':
-        return websiteLeads; // Return website leads directly (add search/filters here if desired)
+        return websiteLeads;
+      case 'stacli_leads':
+        return stacliLeads;
     }
 
     return result;
@@ -447,6 +463,7 @@ export function Dashboard() {
               {activeView === 'closed' && 'Closed / Dropped'}
               {activeView === 'users' && 'User Management'}
               {activeView === 'website_leads' && 'Website Leads'}
+              {activeView === 'stacli_leads' && 'Stacli Website Leads'}
               {activeView === 'user_leads' && (
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="icon" onClick={() => setActiveView('all')} className="-ml-2 h-8 w-8">
@@ -498,6 +515,12 @@ export function Dashboard() {
           ) : activeView === 'website_leads' ? (
             <WebsiteLeadsView
               leads={websiteLeads}
+              onUpdateLead={handleUpdateLead}
+              onDeleteLead={handleDeleteLead}
+            />
+          ) : activeView === 'stacli_leads' ? (
+            <WebsiteLeadsView
+              leads={stacliLeads}
               onUpdateLead={handleUpdateLead}
               onDeleteLead={handleDeleteLead}
             />

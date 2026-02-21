@@ -90,7 +90,9 @@ export function LeadSidebar({
   // Admin Link
   if (user?.publicMetadata?.role === 'admin') {
     // @ts-expect-error - Adding custom view type for navigation
-    navItems.push({ id: 'website_leads', label: 'Website Leads', icon: Globe, count: 0, hideCount: true });
+    navItems.push({ id: 'website_leads', label: 'VM-Website Leads', icon: Globe, count: 0, hideCount: true });
+    // @ts-expect-error - Adding custom view type for navigation
+    navItems.push({ id: 'stacli_leads', label: 'Stacli-Website Leads', icon: Globe, count: 0, hideCount: true });
     // @ts-expect-error - Adding custom view type for navigation
     navItems.push({ id: 'users', label: 'Manage Users', icon: Settings, count: 0, hideCount: true });
   }

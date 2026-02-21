@@ -61,4 +61,4 @@ export interface Lead {
   phone?: string;
 }
 
-export type ViewFilter = 'all' | 'today' | 'overdue' | 'active' | 'closed' | 'table' | 'users' | 'user_leads' | 'website_leads';
+export type ViewFilter = 'all' | 'today' | 'overdue' | 'active' | 'closed' | 'table' | 'users' | 'user_leads' | 'website_leads' | 'stacli_leads';
