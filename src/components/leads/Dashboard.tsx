@@ -550,38 +550,42 @@ export function Dashboard() {
 
       <main className="flex-1 overflow-y-auto h-[calc(100vh-65px)] md:h-screen">
         <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              {activeView === 'all' && 'Dashboard'}
-              {activeView === 'table' && 'Lead Table'}
-              {activeView === 'overdue' && 'Overdue Leads'}
-              {activeView === 'today' && "Today's Follow-ups"}
-              {activeView === 'active' && 'Active Leads'}
-              {activeView === 'closed' && 'Closed / Dropped'}
-              {activeView === 'active' && 'Active Leads'}
-              {activeView === 'closed' && 'Closed / Dropped'}
-              {activeView === 'folders' && ''} {/* Title handled inside FoldersView */}
-              {activeView === 'users' && 'User Management'}
-              {activeView === 'website_leads' && 'Website Leads'}
-              {activeView === 'stacli_leads' && 'Stacli Website Leads'}
-              {activeView === 'vm_onboarding' && 'VM-Client Onboarding'}
-              {activeView === 'stacli_onboarding' && 'Stacli-Client Onboarding'}
-              {activeView === 'user_leads' && (
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => setActiveView('all')} className="-ml-2 h-8 w-8">
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                  <span>Leads by {selectedUserForLeads?.email}</span>
-                </div>
-              )}
-              {typeof activeView === 'string' && activeView.startsWith('folder_') && (
-                <span>Folder: {folders.find(f => f.id === activeView.replace('folder_', ''))?.name || 'Unknown'}</span>
-              )}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''}
-            </p>
-          </div>
+          {activeView === 'folders' ? <div /> : (
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">
+                {activeView === 'all' && 'Dashboard'}
+                {activeView === 'table' && 'Lead Table'}
+                {activeView === 'overdue' && 'Overdue Leads'}
+                {activeView === 'today' && "Today's Follow-ups"}
+                {activeView === 'active' && 'Active Leads'}
+                {activeView === 'closed' && 'Closed / Dropped'}
+                {activeView === 'users' && 'User Management'}
+                {activeView === 'website_leads' && 'Website Leads'}
+                {activeView === 'stacli_leads' && 'Stacli Website Leads'}
+                {activeView === 'vm_onboarding' && 'VM-Client Onboarding'}
+                {activeView === 'stacli_onboarding' && 'Stacli-Client Onboarding'}
+                {activeView === 'user_leads' && (
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => setActiveView('all')} className="-ml-2 h-8 w-8">
+                      <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <span>Leads by {selectedUserForLeads?.email}</span>
+                  </div>
+                )}
+                {typeof activeView === 'string' && activeView.startsWith('folder_') && (
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => setActiveView('folders')} className="-ml-2 h-8 w-8">
+                      <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <span>Folder: {folders.find(f => f.id === activeView.replace('folder_', ''))?.name || 'Unknown'}</span>
+                  </div>
+                )}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          )}
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <AccountModal />

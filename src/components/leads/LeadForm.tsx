@@ -340,6 +340,86 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
           </div>
 
           <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="folder">Folder</Label>
+              {onCreateFolder && !isLocked && !isCreatingFolder && (
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 text-xs"
+                  onClick={() => setIsCreatingFolder(true)}
+                >
+                  + New Folder
+                </Button>
+              )}
+            </div>
+
+            {isCreatingFolder ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  autoFocus
+                  placeholder="Folder name"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (newFolderName.trim() && onCreateFolder) {
+                        onCreateFolder(newFolderName.trim()).then(folder => {
+                          if (folder) {
+                            setFolderId(folder.id);
+                            setIsCreatingFolder(false);
+                            setNewFolderName('');
+                          }
+                        });
+                      }
+                    } else if (e.key === 'Escape') {
+                      setIsCreatingFolder(false);
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  onClick={async () => {
+                    if (newFolderName.trim() && onCreateFolder) {
+                      const folder = await onCreateFolder(newFolderName.trim());
+                      if (folder) {
+                        setFolderId(folder.id);
+                        setIsCreatingFolder(false);
+                        setNewFolderName('');
+                      }
+                    }
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setIsCreatingFolder(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <Select value={folderId} onValueChange={setFolderId} disabled={isLocked}>
+                <SelectTrigger id="folder">
+                  <SelectValue placeholder="No Folder" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Folder</SelectItem>
+                  {folders.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          <div className="space-y-2">
             <Label>Outreach Channel</Label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -459,86 +539,6 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="folder">Folder</Label>
-                {onCreateFolder && !isLocked && !isCreatingFolder && (
-                  <Button
-                    type="button"
-                    variant="link"
-                    className="h-auto p-0 text-xs"
-                    onClick={() => setIsCreatingFolder(true)}
-                  >
-                    + New Folder
-                  </Button>
-                )}
-              </div>
-
-              {isCreatingFolder ? (
-                <div className="flex items-center gap-2">
-                  <Input
-                    autoFocus
-                    placeholder="Folder name"
-                    value={newFolderName}
-                    onChange={(e) => setNewFolderName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (newFolderName.trim() && onCreateFolder) {
-                          onCreateFolder(newFolderName.trim()).then(folder => {
-                            if (folder) {
-                              setFolderId(folder.id);
-                              setIsCreatingFolder(false);
-                              setNewFolderName('');
-                            }
-                          });
-                        }
-                      } else if (e.key === 'Escape') {
-                        setIsCreatingFolder(false);
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="outline"
-                    onClick={async () => {
-                      if (newFolderName.trim() && onCreateFolder) {
-                        const folder = await onCreateFolder(newFolderName.trim());
-                        if (folder) {
-                          setFolderId(folder.id);
-                          setIsCreatingFolder(false);
-                          setNewFolderName('');
-                        }
-                      }
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setIsCreatingFolder(false)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <Select value={folderId} onValueChange={setFolderId} disabled={isLocked}>
-                  <SelectTrigger id="folder">
-                    <SelectValue placeholder="No Folder" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Folder</SelectItem>
-                    {folders.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
             </div>
 
             <div className="space-y-2">
