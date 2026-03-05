@@ -76,8 +76,8 @@ Run this exact block of commands to automatically safely create the `.env` file:
 ```bash
 # This creates the .env file with the proper formatting
 echo "PORT=5000" > .env
-echo "MONGODB_URI=mongodb+srv://techteam_db_user:PAnxIpwBxAgei6oJ@cluster0.owz0jgd.mongodb.net/venturemond_lms?retryWrites=true&w=majority" >> .env
-echo "WEBSITE_DB_URI=mongodb+srv://techteam_db_user:PAnxIpwBxAgei6oJ@cluster0.owz0jgd.mongodb.net/venturemond_lms?retryWrites=true&w=majority" >> .env
+echo "MONGODB_URI=mongodb+srv://techteam_db_user:<YOUR_DB_PASSWORD>@cluster0.owz0jgd.mongodb.net/venturemond_lms?retryWrites=true&w=majority" >> .env
+echo "WEBSITE_DB_URI=mongodb+srv://techteam_db_user:<YOUR_DB_PASSWORD>@cluster0.owz0jgd.mongodb.net/venturemond_lms?retryWrites=true&w=majority" >> .env
 echo "VITE_CLERK_PUBLISHABLE_KEY=pk_test_c2hhcnAtcm9kZW50LTQwLmNsZXJrLmFjY291bnRzLmRldiQ" >> .env
 echo "CLERK_SECRET_KEY=sk_test_bmfQn8odXtPE9oknSFHlyuWUkuz609wHi5McfxA11h" >> .env
 ```

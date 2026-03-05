@@ -59,7 +59,7 @@ npm install
 
 # Setup .env (Ensure credentials are correct)
 echo "PORT=5000" > .env
-echo "MONGODB_URI=mongodb+srv://kalyanguraka7_db_user:cKNMM6YxANy4vGK5@cluster0.eaccjad.mongodb.net/?appName=Cluster0" >> .env
+echo "MONGODB_URI=mongodb+srv://kalyanguraka7_db_user:<YOUR_DB_PASSWORD>@cluster0.eaccjad.mongodb.net/?appName=Cluster0" >> .env
 
 # Start with PM2
 pm2 start src/app.js --name "backend"
