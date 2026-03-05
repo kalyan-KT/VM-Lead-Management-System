@@ -21,6 +21,30 @@ const leadSchema = new mongoose.Schema({
         required: true,
         trim: true,
     },
+    companyName: {
+        type: String,
+        default: '',
+        trim: true,
+    },
+    designation: {
+        type: String,
+        default: '',
+        trim: true,
+    },
+    outreachChannel: {
+        type: [String],
+        default: [],
+    },
+    email: {
+        type: String,
+        default: '',
+        trim: true,
+    },
+    contactNumber: {
+        type: String,
+        default: '',
+        trim: true,
+    },
     source: {
         type: String,
         required: true,

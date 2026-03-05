@@ -1,6 +1,8 @@
 const Lead = require('../models/Lead');
 const WebsiteLead = require('../models/WebsiteLead'); // Import new model
 const StacliLead = require('../models/StacliLead'); // Import Stacli model
+const VmOnboarding = require('../models/VmOnboarding'); // Import VM Onboarding model
+const StacliOnboarding = require('../models/StacliOnboarding'); // Import Stacli Onboarding model
 const { clerkClient } = require('@clerk/clerk-sdk-node');
 
 // Helper to verify Admin role securely
@@ -146,6 +148,90 @@ exports.getLead = async (req, res) => {
             }
         }
 
+        // Failover to VM Onboarding for Admins
+        if (!lead && isAdmin && VmOnboarding) {
+            const vmLead = await VmOnboarding.findById(req.params.id);
+            if (vmLead) {
+                isWebsite = true;
+                const vl = vmLead.toObject();
+                // Map to Lead structure
+                lead = {
+                    ...vl,
+                    id: vl._id.toString(),
+                    source: 'Website',
+                    status: vl.status || 'New',
+                    primaryContact: vl.email,
+                    contextNote: `Message: ${vl.message || ''}`,
+                    company: vl.companyName || '',
+                    service: vl.services || '',
+                    budget: vl.budgetRange || '',
+                    division: 'VM Onboarding',
+                    phone: vl.phone || '',
+                    isWebsiteLead: true,
+                    isVmOnboarding: true,
+                    companyWebsite: vl.companyWebsite || '',
+                    industry: vl.industry || '',
+                    companyAddress: vl.companyAddress || '',
+                    companyDescription: vl.companyDescription || '',
+                    jobTitle: vl.jobTitle || '',
+                    projectName: vl.projectName || '',
+                    primaryGoals: vl.primaryGoals || '',
+                    idealStartDate: vl.idealStartDate || '',
+                    howDidYouHear: vl.howDidYouHear || '',
+                    additionalComments: vl.additionalComments || '',
+                    tags: [],
+                    notes: [],
+                    relevantLinks: [],
+                    documents: [],
+                    followUps: [],
+                    meetingNotes: [],
+                    createdBy: 'system'
+                };
+            }
+        }
+
+        // Failover to Stacli Onboarding for Admins
+        if (!lead && isAdmin && StacliOnboarding) {
+            const stacliOnboardingLead = await StacliOnboarding.findById(req.params.id);
+            if (stacliOnboardingLead) {
+                isWebsite = true;
+                const sl = stacliOnboardingLead.toObject();
+                // Map to Lead structure
+                lead = {
+                    ...sl,
+                    id: sl._id.toString(),
+                    source: 'Website',
+                    status: sl.status || 'New',
+                    primaryContact: sl.email,
+                    contextNote: `Project: ${sl.projectName || ''}\nGoals: ${sl.primaryGoals || ''}\nComments: ${sl.additionalComments || ''}`,
+                    company: sl.companyName || '',
+                    service: Array.isArray(sl.services) ? sl.services.join(', ') : sl.services || '',
+                    budget: sl.budgetRange || '',
+                    division: 'Stacli Onboarding',
+                    phone: sl.phoneNumber || '',
+                    isWebsiteLead: true,
+                    isStacliOnboarding: true,
+                    companyWebsite: sl.companyWebsite || '',
+                    industry: sl.industry || '',
+                    companyAddress: sl.companyAddress || '',
+                    companyDescription: sl.companyDescription || '',
+                    jobTitle: sl.jobTitle || '',
+                    projectName: sl.projectName || '',
+                    primaryGoals: sl.primaryGoals || '',
+                    idealStartDate: sl.idealStartDate || '',
+                    howDidYouHear: sl.howDidYouHear || '',
+                    additionalComments: sl.additionalComments || '',
+                    tags: [],
+                    notes: [],
+                    relevantLinks: [],
+                    documents: [],
+                    followUps: [],
+                    meetingNotes: [],
+                    createdBy: 'system'
+                };
+            }
+        }
+
         if (!lead) {
             return res.status(404).json({ message: 'Lead not found' });
         }
@@ -176,6 +262,8 @@ exports.updateLead = async (req, res) => {
         let existingLead = await Lead.findById(req.params.id);
         let isWebsite = false;
         let isStacli = false;
+        let isVmOnboarding = false;
+        let isStacliOnboarding = false;
 
         // Failover check for Website Leads (Admin only)
         if (!existingLead && isAdmin && WebsiteLead) {
@@ -193,6 +281,36 @@ exports.updateLead = async (req, res) => {
                 existingLead = stacliInfo;
                 isWebsite = true;
                 isStacli = true;
+            }
+        }
+
+        // Failover check for VM Onboarding
+        if (!existingLead && isAdmin && VmOnboarding) {
+            const vmInfo = await VmOnboarding.findById(req.params.id);
+            if (vmInfo) {
+                existingLead = vmInfo;
+                isWebsite = true;
+                isVmOnboarding = true;
+            }
+        }
+
+        // Failover check for Stacli Onboarding
+        if (!existingLead && isAdmin && StacliOnboarding) {
+            const stacliOnboardingInfo = await StacliOnboarding.findById(req.params.id);
+            if (stacliOnboardingInfo) {
+                existingLead = stacliOnboardingInfo;
+                isWebsite = true;
+                isStacliOnboarding = true;
+            }
+        }
+
+        // Failover check for Stacli Onboarding
+        if (!existingLead && isAdmin && StacliOnboarding) {
+            const stacliOnboardingInfo = await StacliOnboarding.findById(req.params.id);
+            if (stacliOnboardingInfo) {
+                existingLead = stacliOnboardingInfo;
+                isWebsite = true;
+                isStacliOnboarding = true;
             }
         }
 
@@ -218,7 +336,73 @@ exports.updateLead = async (req, res) => {
 
         let updatedLead;
         if (isWebsite) {
-            if (isStacli) {
+            if (isVmOnboarding) {
+                updatedLead = await VmOnboarding.findByIdAndUpdate(req.params.id, updates, {
+                    new: true,
+                    runValidators: false,
+                });
+                const vl = updatedLead.toObject();
+                updatedLead = {
+                    ...vl,
+                    id: vl._id.toString(),
+                    source: 'Website',
+                    status: vl.status || 'New',
+                    primaryContact: vl.email,
+                    contextNote: `Message: ${vl.message || ''}`,
+                    company: vl.companyName || '',
+                    service: vl.services || '',
+                    budget: vl.budgetRange || '',
+                    division: 'VM Onboarding',
+                    phone: vl.phone || '',
+                    isWebsiteLead: true,
+                    isVmOnboarding: true,
+                    tags: [],
+                    notes: [],
+                    relevantLinks: [],
+                    documents: [],
+                    followUps: [],
+                    meetingNotes: [],
+                    createdBy: 'system'
+                };
+            } else if (isStacliOnboarding) {
+                updatedLead = await StacliOnboarding.findByIdAndUpdate(req.params.id, updates, {
+                    new: true,
+                    runValidators: false,
+                });
+                const sl = updatedLead.toObject();
+                updatedLead = {
+                    ...sl,
+                    id: sl._id.toString(),
+                    source: 'Website',
+                    status: sl.status || 'New',
+                    primaryContact: sl.email,
+                    contextNote: `Project: ${sl.projectName || ''}\nGoals: ${sl.primaryGoals || ''}\nComments: ${sl.additionalComments || ''}`,
+                    company: sl.companyName || '',
+                    service: Array.isArray(sl.services) ? sl.services.join(', ') : sl.services || '',
+                    budget: sl.budgetRange || '',
+                    division: 'Stacli Onboarding',
+                    phone: sl.phoneNumber || '',
+                    isWebsiteLead: true,
+                    isStacliOnboarding: true,
+                    companyWebsite: sl.companyWebsite || '',
+                    industry: sl.industry || '',
+                    companyAddress: sl.companyAddress || '',
+                    companyDescription: sl.companyDescription || '',
+                    jobTitle: sl.jobTitle || '',
+                    projectName: sl.projectName || '',
+                    primaryGoals: sl.primaryGoals || '',
+                    idealStartDate: sl.idealStartDate || '',
+                    howDidYouHear: sl.howDidYouHear || '',
+                    additionalComments: sl.additionalComments || '',
+                    tags: [],
+                    notes: [],
+                    relevantLinks: [],
+                    documents: [],
+                    followUps: [],
+                    meetingNotes: [],
+                    createdBy: 'system'
+                };
+            } else if (isStacli) {
                 updatedLead = await StacliLead.findByIdAndUpdate(req.params.id, updates, {
                     new: true,
                     runValidators: false,
@@ -461,6 +645,8 @@ exports.deleteLead = async (req, res) => {
         let lead = await Lead.findById(req.params.id);
         let isWebsite = false;
         let isStacli = false;
+        let isVmOnboarding = false;
+        let isStacliOnboarding = false;
 
         if (!lead && isAdmin && WebsiteLead) {
             lead = await WebsiteLead.findById(req.params.id);
@@ -475,6 +661,22 @@ exports.deleteLead = async (req, res) => {
             }
         }
 
+        if (!lead && isAdmin && VmOnboarding) {
+            lead = await VmOnboarding.findById(req.params.id);
+            if (lead) {
+                isWebsite = true;
+                isVmOnboarding = true;
+            }
+        }
+
+        if (!lead && isAdmin && StacliOnboarding) {
+            lead = await StacliOnboarding.findById(req.params.id);
+            if (lead) {
+                isWebsite = true;
+                isStacliOnboarding = true;
+            }
+        }
+
         if (!lead) {
             return res.status(404).json({ message: 'Lead not found' });
         }
@@ -484,7 +686,11 @@ exports.deleteLead = async (req, res) => {
         }
 
         if (isWebsite) {
-            if (isStacli) {
+            if (isVmOnboarding) {
+                await VmOnboarding.deleteOne({ _id: req.params.id });
+            } else if (isStacliOnboarding) {
+                await StacliOnboarding.deleteOne({ _id: req.params.id });
+            } else if (isStacli) {
                 await StacliLead.deleteOne({ _id: req.params.id });
             } else {
                 await WebsiteLead.deleteOne({ _id: req.params.id });
@@ -693,6 +899,138 @@ exports.getStacliLeads = async (req, res) => {
         res.status(200).json(formattedStacliLeads);
     } catch (error) {
         console.error('Error fetching stacli leads:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get VM Onboarding leads (Admin only)
+// @route   GET /api/leads/vm-onboarding
+// @access  Private (Admin only)
+exports.getVmOnboardingLeads = async (req, res) => {
+    try {
+        const { userId, sessionClaims } = req.auth;
+        let isAdmin = sessionClaims?.metadata?.role === 'admin';
+
+        if (!isAdmin) {
+            isAdmin = await verifyAdmin(userId);
+        }
+
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'Access denied: Admin only' });
+        }
+
+        if (!VmOnboarding) {
+            return res.status(503).json({ message: 'Website Database not connected for VM Onboarding' });
+        }
+
+        const vmLeads = await VmOnboarding.find({}).sort({ createdAt: -1 });
+
+        const formattedVmLeads = vmLeads.map(lead => {
+            const vl = lead.toObject();
+            return {
+                ...vl,
+                name: vl.fullName || vl.name || 'Unknown', // Map fullName to name for the frontend
+                id: vl._id.toString(),
+                source: 'Website',
+                status: vl.status || 'New',
+                primaryContact: vl.email,
+                contextNote: `Message: ${vl.message || ''}`,
+                company: vl.companyName || vl.company || '',
+                service: vl.services || vl.service || '',
+                budget: vl.budgetRange || vl.budget || '',
+                division: 'VM Onboarding',
+                phone: vl.phone || '',
+                isWebsiteLead: true,
+                isVmOnboarding: true,
+                companyWebsite: vl.companyWebsite || '',
+                industry: vl.industry || '',
+                companyAddress: vl.companyAddress || '',
+                companyDescription: vl.companyDescription || '',
+                jobTitle: vl.jobTitle || '',
+                projectName: vl.projectName || '',
+                primaryGoals: vl.primaryGoals || '',
+                idealStartDate: vl.idealStartDate || '',
+                howDidYouHear: vl.howDidYouHear || '',
+                additionalComments: vl.additionalComments || '',
+                tags: [],
+                notes: [],
+                relevantLinks: [],
+                documents: [],
+                followUps: [],
+                meetingNotes: [],
+                createdBy: 'system'
+            };
+        });
+
+        res.status(200).json(formattedVmLeads);
+    } catch (error) {
+        console.error('Error fetching VM Onboarding leads:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get Stacli Onboarding leads (Admin only)
+// @route   GET /api/leads/stacli-onboarding
+// @access  Private (Admin only)
+exports.getStacliOnboardingLeads = async (req, res) => {
+    try {
+        const { userId, sessionClaims } = req.auth;
+        let isAdmin = sessionClaims?.metadata?.role === 'admin';
+
+        if (!isAdmin) {
+            isAdmin = await verifyAdmin(userId);
+        }
+
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'Access denied: Admin only' });
+        }
+
+        if (!StacliOnboarding) {
+            return res.status(503).json({ message: 'Website Database not connected for Stacli Onboarding' });
+        }
+
+        const slLeads = await StacliOnboarding.find({}).sort({ createdAt: -1 });
+
+        const formattedSlLeads = slLeads.map(lead => {
+            const sl = lead.toObject();
+            return {
+                ...sl,
+                name: sl.fullName || sl.name || 'Unknown',
+                id: sl._id.toString(),
+                source: 'Website',
+                status: sl.status || 'New',
+                primaryContact: sl.email,
+                contextNote: `Project: ${sl.projectName || ''}\nGoals: ${sl.primaryGoals || ''}\nComments: ${sl.additionalComments || ''}`,
+                company: sl.companyName || sl.company || '',
+                service: Array.isArray(sl.services) ? sl.services.join(', ') : sl.services || sl.service || '',
+                budget: sl.budgetRange || sl.budget || '',
+                division: 'Stacli Onboarding',
+                phone: sl.phoneNumber || sl.phone || '',
+                isWebsiteLead: true,
+                isStacliOnboarding: true,
+                companyWebsite: sl.companyWebsite || '',
+                industry: sl.industry || '',
+                companyAddress: sl.companyAddress || '',
+                companyDescription: sl.companyDescription || '',
+                jobTitle: sl.jobTitle || '',
+                projectName: sl.projectName || '',
+                primaryGoals: sl.primaryGoals || '',
+                idealStartDate: sl.idealStartDate || '',
+                howDidYouHear: sl.howDidYouHear || '',
+                additionalComments: sl.additionalComments || '',
+                tags: [],
+                notes: [],
+                relevantLinks: [],
+                documents: [],
+                followUps: [],
+                meetingNotes: [],
+                createdBy: 'system'
+            };
+        });
+
+        res.status(200).json(formattedSlLeads);
+    } catch (error) {
+        console.error('Error fetching Stacli Onboarding leads:', error);
         res.status(500).json({ message: error.message });
     }
 };

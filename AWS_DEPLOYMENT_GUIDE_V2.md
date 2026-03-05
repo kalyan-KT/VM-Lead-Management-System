@@ -1,133 +1,125 @@
-# End-to-End AWS EC2 Deployment Guide (Updated with Clerk)
+# Complete AWS EC2 Deployment Guide (Fresh Server)
 
-This guide is tailored specifically for your project with your **actual database credentials** included. Use this version for deployment.
-
----
-
-## 1. Launch & Connect to AWS EC2
-
-1.  **Launch Instance**:
-    *   Go to **AWS Console > EC2 > Launch Instance**.
-    *   **Name**: `LeadManagementApp`.
-    *   **AMI**: `Ubuntu Server 24.04 LTS`.
-    *   **Instance Type**: `t3.small` (Recommended) or `t2.micro`.
-    *   **Key Pair**: Create new -> `lead-app-key` -> Download `.pem`.
-    *   **Security Group**: Allow **SSH**, **HTTP**, **HTTPS**.
-    *   Click **Launch**.
-
-2.  **Connect**:
-    *   Open Terminal (or Git Bash on Windows).
-    *   Navigate to your key file using `cd`.
-    *   Run:
-        ```bash
-        chmod 400 lead-app-key.pem
-        ssh -i "lead-app-key.pem" ubuntu@<YOUR_EC2_PUBLIC_IP>
-        ```
+This is the exact, step-by-step guide to deploying your Lead Management System to a brand new AWS EC2 server, connected to your new `techteam_db_user` MongoDB database on `cluster0.owz0jgd`.
 
 ---
 
-## 2. Server Setup (Copy & Paste)
+## 🚀 Phase 1: Launch the EC2 Instance
 
-Run these commands on your EC2 server to install Node.js 18, Nginx, and PM2.
-*Note: You do NOT need to install MongoDB or Clerk separately. They are handled via the Cloud and NPM.*
+1. Go to your **AWS Console > EC2 > Launch Instance**.
+2. **Name**: `LMS-Production-Server`.
+3. **AMI (OS)**: Select **Ubuntu 24.04 LTS**.
+4. **Instance Type**: Select `t3.small` (Recommended for React builds) or `t2.micro` (Free tier).
+5. **Key Pair**: Create a new Key Pair named `lms-server-key.pem` and download it to your computer.
+6. **Network Settings**: Check BOTH boxes:
+   - ✅ Allow HTTP traffic from the internet
+   - ✅ Allow HTTPS traffic from the internet
+7. Click **Launch Instance**.
+
+---
+
+## 💻 Phase 2: Connect & Install Software
+
+Open Git Bash (or PowerShell) on your local computer where your `.pem` key is.
 
 ```bash
-# Update System
+# Connect to your server (replace with your server's Public IP)
+chmod 400 lms-server-key.pem
+ssh -i "lms-server-key.pem" ubuntu@<YOUR_EC2_PUBLIC_IP>
+```
+
+Once you are logged into the AWS server, paste this block to install everything:
+
+```bash
+# Update Ubuntu
 sudo apt update && sudo apt upgrade -y
 
-# Install Node.js 18
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt install -y nodejs
+# Install Node.js 20 & Nginx
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs nginx zip unzip
 
-# Install Nginx & Zip (for file handling)
-sudo apt install -y nginx zip unzip
-
-# Install PM2 (Process Manager)
+# Install PM2 to keep the backend running forever
 sudo npm install -g pm2
 ```
 
 ---
 
-## 3. Upload Your Code
+## 📦 Phase 3: Upload Your Code
 
-Since your code is local, the easiest way (without setting up Git auth) is to copy it securely from your local machine.
+The easiest way to get your local code to the fresh server is to use GitHub.
 
-**On your LOCAL machine (open a new terminal window):**
-
-```bash
-# Navigate to your project root
-cd e:\VM-Lead-Management-System\Lead-Management-System
-
-# Exclude node_modules to make upload fast (create a temporary zip)
-# Windows PowerShell command to zip (or just right-click folder -> Send to -> Compressed folder named 'project.zip')
-
-# Upload the zip file to EC2 using SCP
-scp -i "path/to/lead-app-key.pem" project.zip ubuntu@<YOUR_EC2_PUBLIC_IP>:~/
-```
-
-**Back on EC2 Server:**
+1. Publish your local `Lead-Management-System` folder to a GitHub repository.
+2. In your AWS terminal, clone the repository:
 
 ```bash
-# Unzip the project
-unzip project.zip -d app
-cd app
+# Clone the repository (Replace URL with yours)
+git clone <YOUR_GITHUB_REPO_URL>
+
+# Enter the folder
+cd Lead-Management-System
 ```
 
 ---
 
-## 4. Deploy Backend
+## ⚙️ Phase 4: Configure & Start Backend
 
 ```bash
 cd backend
-
-# Install dependencies (This installs Clerk SDK and Mongoose automatically)
 npm install
+```
 
-# Create .env file with YOUR Credentials
-# We write this directly to the file:
+**CRITICAL STEP: Create the `.env` file!**
+*Linux is very strict. Do NOT put quotes `"` around the MongoDB URLs on the server, or the backend will crash with an "Invalid scheme" error!*
+
+Run this exact block of commands to automatically safely create the `.env` file:
+
+```bash
+# This creates the .env file with the proper formatting
 echo "PORT=5000" > .env
-echo "MONGODB_URI=mongodb+srv://kalyanguraka7_db_user:cKNMM6YxANy4vGK5@cluster0.eaccjad.mongodb.net/?appName=Cluster0" >> .env
-# Note: Since auth is frontend-only for now, backend key is optional unless verifying tokens server-side.
+echo "MONGODB_URI=mongodb+srv://techteam_db_user:PAnxIpwBxAgei6oJ@cluster0.owz0jgd.mongodb.net/venturemond_lms?retryWrites=true&w=majority" >> .env
+echo "WEBSITE_DB_URI=mongodb+srv://techteam_db_user:PAnxIpwBxAgei6oJ@cluster0.owz0jgd.mongodb.net/venturemond_lms?retryWrites=true&w=majority" >> .env
+echo "VITE_CLERK_PUBLISHABLE_KEY=pk_test_c2hhcnAtcm9kZW50LTQwLmNsZXJrLmFjY291bnRzLmRldiQ" >> .env
+echo "CLERK_SECRET_KEY=sk_test_bmfQn8odXtPE9oknSFHlyuWUkuz609wHi5McfxA11h" >> .env
+```
 
-# Start Backend with PM2
-pm2 start src/app.js --name "lead-backend"
+**Start the Backend:**
+```bash
+pm2 start src/server.js --name "lms-backend"
 pm2 save
 pm2 startup
 ```
+*(You can verify it started successfully by typing `pm2 logs`. You should see "MongoDB Connected".)*
 
 ---
 
-## 5. Deploy Frontend
-
-**Important:** You must provide your Clerk Publishable Key during the build.
+## 🎨 Phase 5: Build The Frontend
 
 ```bash
-cd ../ # Go back to app root
+# Go back to the main frontend folder
+cd ~/Lead-Management-System
 
-# Install dependencies
+# Install React dependencies
 npm install
 
-# Build the Frontend with your Clerk Key
-# REPLACE 'pk_test_...' with your ACTUAL key from your local .env file
-export VITE_CLERK_PUBLISHABLE_KEY=pk_test_YOUR_ACTUAL_KEY_HERE
+# Safely inject the Clerk Public Key and Build the App
+export VITE_CLERK_PUBLISHABLE_KEY=pk_test_c2hhcnAtcm9kZW50LTQwLmNsZXJrLmFjY291bnRzLmRldiQ
 npm run build
 
-# Copy build files to Nginx web folder
+# Copy the built website to the public internet folder
 sudo cp -r dist/* /var/www/html/
 ```
 
 ---
 
-## 6. Configure Nginx
+## 🌍 Phase 6: Configure Nginx Routing
 
-This connects the internet to your app.
+We need Nginx to route `/api/` traffic to the backend, and normal clicks to the React frontend.
 
 ```bash
-# Open config file
 sudo nano /etc/nginx/sites-available/default
 ```
 
-**Delete everything in that file and paste this:**
+Delete everything currently inside that file, and paste this block:
 
 ```nginx
 server {
@@ -153,20 +145,73 @@ server {
     }
 }
 ```
+**Save & Exit:** Press `Ctrl+O`, hit `Enter`, press `Ctrl+X`.
 
-**Save & Exit:** Press `Ctrl+O`, `Enter`, `Ctrl+X`.
-
-**Restart Nginx:**
+**Restart Web Server:**
 ```bash
 sudo systemctl restart nginx
 ```
 
 ---
 
-## 7. Done!
+## 🎉 Phase 7: Connect a Domain & Add Free SSL (HTTPS)
 
-Go to `http://<YOUR_EC2_PUBLIC_IP>` in your browser.
+Before you can add an SSL certificate, you **must** connect a real domain name to your AWS server. Let's Encrypt cannot secure a raw IP address.
 
-Your Lead Management System is now live!
-- **Database**: Connected to MongoDB Atlas.
-- **Auth**: Secured by Clerk.
+### 1. Point Your Domain to AWS
+1. Go to your Domain Registrar (GoDaddy, Namecheap, Route53, etc.).
+2. Go to **DNS Settings**.
+3. Create an **A Record**:
+   - **Name/Host**: `@` (or `lms` if using a subdomain like `lms.venturemond.com`)
+   - **Value/Target**: `<YOUR_EC2_PUBLIC_IP>` (e.g. `13.56.24.89`)
+   - **TTL**: Lowest possible (e.g. 5 mins)
+4. Wait a few minutes for the DNS to propagate.
+
+### 2. Update Nginx to recognize your Domain
+Go back to your EC2 terminal and edit the Nginx configuration:
+```bash
+sudo nano /etc/nginx/sites-available/default
+```
+Find the line that says `server_name _;` and **replace the underscore `_` with your actual domain name.**
+```nginx
+server {
+    listen 80;
+    server_name lms.venturemond.com; # <--- CHANGE THIS TO YOUR DOMAIN
+
+    # ...rest of your config
+```
+Save and exit (`Ctrl+O`, `Enter`, `Ctrl+X`), then test the config:
+```bash
+# Check if config is valid
+sudo nginx -t
+
+# Restart Nginx
+sudo systemctl restart nginx
+```
+
+### 3. Install Certbot (Let's Encrypt SSL)
+Certbot is an automated tool that instantly gives your server a free, auto-renewing SSL certificate.
+
+On your EC2 Terminal, run these commands:
+```bash
+# Install Certbot and its Nginx plugin
+sudo apt install -y certbot python3-certbot-nginx
+
+# Request the Certificate (Replace with your actual email and domain)
+sudo certbot --nginx -m tech@venturemond.com --agree-tos --no-eff-email -d lms.venturemond.com
+```
+
+### 4. What Certbot Does Next
+You will see a success message. Certbot just did three things automatically:
+1. Contacted Let's Encrypt to verify you own the domain.
+2. Downloaded the secure SSL certificates to your `/etc/letsencrypt/` folder.
+3. Automatically rewrote your Nginx configuration file to listen on Port 443 (HTTPS) and route all HTTP traffic to HTTPS.
+
+### 5. Verify the Auto-Renewal
+Let's Encrypt certificates expire every 90 days. But Certbot installed a background timer to renew them automatically!
+
+Test the auto-renewal to make sure it works:
+```bash
+sudo certbot renew --dry-run
+```
+If that says success, your **Lead Management System is fully verified, secured with HTTPS, and live in Production forever!**

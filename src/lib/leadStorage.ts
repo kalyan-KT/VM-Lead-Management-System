@@ -88,6 +88,32 @@ export const getStacliLeads = async (token?: string): Promise<Lead[]> => {
   }
 };
 
+export const getVmOnboardingLeads = async (token?: string): Promise<Lead[]> => {
+  try {
+    const response = await fetch(`${API_URL}/vm-onboarding`, {
+      headers: getHeaders(token),
+    });
+    if (!response.ok) throw new Error('Failed to fetch vm onboarding leads');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching vm onboarding leads:', error);
+    return [];
+  }
+};
+
+export const getStacliOnboardingLeads = async (token?: string): Promise<Lead[]> => {
+  try {
+    const response = await fetch(`${API_URL}/stacli-onboarding`, {
+      headers: getHeaders(token),
+    });
+    if (!response.ok) throw new Error('Failed to fetch stacli onboarding leads');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching stacli onboarding leads:', error);
+    return [];
+  }
+};
+
 export const saveLead = async (lead: Lead, token?: string): Promise<Lead> => {
   try {
     // Determine if create or update based on ID format (simple heuristic)

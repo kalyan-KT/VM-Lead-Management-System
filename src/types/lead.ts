@@ -53,7 +53,12 @@ export interface Lead {
   // Admin Review
   adminReview?: 'Sent Message' | 'Sent Note' | 'Hiring Post' | 'Rejected' | 'Other';
   adminReviewNote?: string;
-  // Website Lead Specific
+  // Website Lead Specific & New Core Fields
+  companyName?: string;
+  designation?: string;
+  outreachChannel?: string[];
+  email?: string;
+  contactNumber?: string;
   company?: string;
   service?: string;
   budget?: string;
@@ -61,4 +66,4 @@ export interface Lead {
   phone?: string;
 }
 
-export type ViewFilter = 'all' | 'today' | 'overdue' | 'active' | 'closed' | 'table' | 'users' | 'user_leads' | 'website_leads' | 'stacli_leads';
+export type ViewFilter = 'all' | 'today' | 'overdue' | 'active' | 'closed' | 'table' | 'users' | 'user_leads' | 'website_leads' | 'stacli_leads' | 'vm_onboarding' | 'stacli_onboarding';

@@ -1,0 +1,30 @@
+[
+  [
+    {
+      "name": "ac-aiojpxt-shard-00-00.owz0jgd.mongodb.net",
+      "port": 27017,
+      "priority": 0,
+      "weight": 0,
+      "type": "SRV"
+    },
+    {
+      "name": "ac-aiojpxt-shard-00-02.owz0jgd.mongodb.net",
+      "port": 27017,
+      "priority": 0,
+      "weight": 0,
+      "type": "SRV"
+    },
+    {
+      "name": "ac-aiojpxt-shard-00-01.owz0jgd.mongodb.net",
+      "port": 27017,
+      "priority": 0,
+      "weight": 0,
+      "type": "SRV"
+    }
+  ],
+  [
+    [
+      "authSource=admin&replicaSet=atlas-6bgkfc-shard-0"
+    ]
+  ]
+]

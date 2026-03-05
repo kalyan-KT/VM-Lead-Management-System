@@ -1,0 +1,30 @@
+[
+  [
+    {
+      "name": "ac-tbzdhp4-shard-00-00.54knlt3.mongodb.net",
+      "port": 27017,
+      "priority": 0,
+      "weight": 0,
+      "type": "SRV"
+    },
+    {
+      "name": "ac-tbzdhp4-shard-00-02.54knlt3.mongodb.net",
+      "port": 27017,
+      "priority": 0,
+      "weight": 0,
+      "type": "SRV"
+    },
+    {
+      "name": "ac-tbzdhp4-shard-00-01.54knlt3.mongodb.net",
+      "port": 27017,
+      "priority": 0,
+      "weight": 0,
+      "type": "SRV"
+    }
+  ],
+  [
+    [
+      "authSource=admin&replicaSet=atlas-5b1482-shard-0"
+    ]
+  ]
+]

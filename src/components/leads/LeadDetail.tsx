@@ -181,7 +181,7 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete, on
           <SheetHeader className="pb-4">
             <div className="flex items-center justify-between pr-8">
               <SheetTitle className="text-xl font-semibold flex items-center gap-3">
-                {lead.name}
+                {lead.name} {lead.companyName && <span className="text-muted-foreground text-sm font-normal">at {lead.companyName}</span>}
                 <Badge className={cn('text-xs', getStatusColor(lead.status))}>
                   {lead.status}
                 </Badge>
@@ -204,14 +204,33 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete, on
           {/* Lead Summary */}
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-              <div className="flex items-center gap-2 text-sm">
-                {isContactEmail ? (
+              {lead.designation && (
+                <div className="flex items-center gap-2 text-sm col-span-2">
+                  <span className="font-medium text-muted-foreground">Title:</span> {lead.designation}
+                </div>
+              )}
+              {lead.email && (
+                <div className="flex items-center gap-2 text-sm">
                   <Mail className="h-4 w-4 text-muted-foreground" />
-                ) : (
+                  <span className="truncate">{lead.email}</span>
+                </div>
+              )}
+              {lead.contactNumber && (
+                <div className="flex items-center gap-2 text-sm">
                   <Phone className="h-4 w-4 text-muted-foreground" />
-                )}
-                <span className="truncate">{lead.primaryContact}</span>
-              </div>
+                  <span className="truncate">{lead.contactNumber}</span>
+                </div>
+              )}
+              {!lead.email && !lead.contactNumber && lead.primaryContact && (
+                <div className="flex items-center gap-2 text-sm">
+                  {isContactEmail ? (
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="truncate">{lead.primaryContact}</span>
+                </div>
+              )}
               {lead.linkedInUrl && (
                 <div className="flex items-center gap-2 text-sm">
                   <Link2 className="h-4 w-4 text-muted-foreground" />
@@ -248,6 +267,16 @@ export function LeadDetail({ lead, open, onClose, onUpdate, onEdit, onDelete, on
                 {lead.tags.map((tag) => (
                   <Badge key={tag} variant="outline" className="text-xs">
                     {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {lead.outreachChannel && lead.outreachChannel.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {lead.outreachChannel.map((channel) => (
+                  <Badge key={channel} variant="secondary" className="text-xs border-primary/20">
+                    {channel}
                   </Badge>
                 ))}
               </div>

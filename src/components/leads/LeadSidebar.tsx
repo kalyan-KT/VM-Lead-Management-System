@@ -94,6 +94,10 @@ export function LeadSidebar({
     // @ts-expect-error - Adding custom view type for navigation
     navItems.push({ id: 'stacli_leads', label: 'Stacli-Website Leads', icon: Globe, count: 0, hideCount: true });
     // @ts-expect-error - Adding custom view type for navigation
+    navItems.push({ id: 'vm_onboarding', label: 'VM-Client Onboarding', icon: Globe, count: 0, hideCount: true });
+    // @ts-expect-error - Adding custom view type for navigation
+    navItems.push({ id: 'stacli_onboarding', label: 'Stacli-Client Onboarding', icon: Globe, count: 0, hideCount: true });
+    // @ts-expect-error - Adding custom view type for navigation
     navItems.push({ id: 'users', label: 'Manage Users', icon: Settings, count: 0, hideCount: true });
   }
 

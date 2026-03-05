@@ -20,7 +20,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus, AlertCircle } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu';
+import { X, Plus, AlertCircle, ChevronDown } from 'lucide-react';
 
 interface LeadFormProps {
   open: boolean;
@@ -33,11 +39,17 @@ interface LeadFormProps {
 const SOURCES: LeadSource[] = ['LinkedIn', 'WhatsApp', 'Referral', 'Website', 'Other'];
 const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Follow-up', 'Closed', 'Dropped'];
 const PRIORITIES: LeadPriority[] = ['High', 'Medium', 'Low'];
+const OUTREACH_CHANNELS = ['Email', 'Whatsapp', 'Cold Calling', 'Field'];
 
 export function LeadForm({ open, onClose, onSave, existingLead, availableTags = [] }: LeadFormProps) {
   // Deduplicate tags for the list
   const userTags = Array.from(new Set(availableTags)).sort();
   const [name, setName] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [designation, setDesignation] = useState('');
+  const [outreachChannel, setOutreachChannel] = useState<string[]>([]);
+  const [email, setEmail] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
   const [source, setSource] = useState<LeadSource>('LinkedIn');
   const [primaryContact, setPrimaryContact] = useState('');
   const [linkedInUrl, setLinkedInUrl] = useState('');
@@ -73,6 +85,11 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
   useEffect(() => {
     if (existingLead) {
       setName(existingLead.name);
+      setCompanyName(existingLead.companyName || '');
+      setDesignation(existingLead.designation || '');
+      setOutreachChannel(existingLead.outreachChannel || []);
+      setEmail(existingLead.email || '');
+      setContactNumber(existingLead.contactNumber || '');
       setSource(existingLead.source);
       setPrimaryContact(existingLead.primaryContact);
       setLinkedInUrl(existingLead.linkedInUrl || '');
@@ -98,6 +115,11 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
 
   const resetForm = () => {
     setName('');
+    setCompanyName('');
+    setDesignation('');
+    setOutreachChannel([]);
+    setEmail('');
+    setContactNumber('');
     setSource('LinkedIn');
     setPrimaryContact('');
     setLinkedInUrl('');
@@ -197,8 +219,13 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
     const lead: Lead = {
       id: existingLead?.id || generateId(),
       name: name.trim(),
+      companyName: companyName.trim(),
+      designation: designation.trim(),
+      outreachChannel: outreachChannel,
+      email: email.trim(),
+      contactNumber: contactNumber.trim(),
       source,
-      primaryContact: primaryContact.trim(),
+      primaryContact: email.trim() || contactNumber.trim() || primaryContact.trim(),
       linkedInUrl: source === 'LinkedIn' ? linkedInUrl.trim() : '',
       status,
       nextAction: nextAction.trim(),
@@ -250,16 +277,40 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
           {/* Mandatory Fields */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">Person Name *</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Person or Company name"
+                placeholder="Person Name"
                 disabled={isLocked}
                 className={errors.name ? 'border-destructive' : ''}
               />
               {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="companyName">Company Name</Label>
+              <Input
+                id="companyName"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="Company Name"
+                disabled={isLocked}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="designation">Designation</Label>
+              <Input
+                id="designation"
+                value={designation}
+                onChange={(e) => setDesignation(e.target.value)}
+                placeholder="Designation"
+                disabled={isLocked}
+              />
             </div>
 
             <div className="space-y-2">
@@ -277,44 +328,92 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label>Outreach Channel</Label>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between font-normal"
+                  disabled={isLocked}
+                >
+                  <span className="truncate">
+                    {outreachChannel.length > 0 ? outreachChannel.join(', ') : "Select channels..."}
+                  </span>
+                  <ChevronDown className="h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[--radix-dropdown-menu-trigger-width] min-w-[200px]">
+                {OUTREACH_CHANNELS.map(channel => (
+                  <DropdownMenuCheckboxItem
+                    key={channel}
+                    checked={outreachChannel.includes(channel)}
+                    onSelect={(e) => e.preventDefault()} // Keep menu open
+                    onCheckedChange={(checked) => {
+                      if (!isLocked) {
+                        setOutreachChannel(prev =>
+                          checked
+                            ? [...prev, channel]
+                            : prev.filter(c => c !== channel)
+                        );
+                      }
+                    }}
+                  >
+                    {channel}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="primaryContact">Primary Contact</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="primaryContact"
-                value={primaryContact}
-                onChange={(e) => setPrimaryContact(e.target.value)}
-                placeholder="Email or Phone"
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email Address"
                 disabled={isLocked}
-                className={errors.primaryContact ? 'border-destructive' : ''}
               />
-              {errors.primaryContact && <p className="text-xs text-destructive">{errors.primaryContact}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="linkedInUrl">
-                {source === 'LinkedIn' ? 'LinkedIn Profile URL' :
-                  source === 'WhatsApp' ? 'WhatsApp Number' :
-                    source === 'Website' ? 'Website URL' :
-                      source === 'Referral' ? 'Referrer Name' :
-                        'Source Details'}
-              </Label>
+              <Label htmlFor="contactNumber">Contact Number</Label>
               <Input
-                id="linkedInUrl"
-                value={linkedInUrl}
-                onChange={(e) => setLinkedInUrl(e.target.value)}
-                placeholder={
-                  source === 'LinkedIn' ? 'linkedin.com/in/username' :
-                    source === 'WhatsApp' ? '+1234567890' :
-                      source === 'Website' ? 'https://example.com' :
-                        source === 'Referral' ? 'Name of referrer' :
-                          'Enter details'
-                }
+                id="contactNumber"
+                value={contactNumber}
+                onChange={(e) => setContactNumber(e.target.value)}
+                placeholder="Phone Number"
                 disabled={isLocked}
-                className={errors.linkedInUrl ? 'border-destructive' : ''}
               />
-              {errors.linkedInUrl && <p className="text-xs text-destructive">{errors.linkedInUrl}</p>}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="linkedInUrl">
+              {source === 'LinkedIn' ? 'LinkedIn Profile URL' :
+                source === 'WhatsApp' ? 'WhatsApp Number' :
+                  source === 'Website' ? 'Website URL' :
+                    source === 'Referral' ? 'Referrer Name' :
+                      'Source Details'}
+            </Label>
+            <Input
+              id="linkedInUrl"
+              value={linkedInUrl}
+              onChange={(e) => setLinkedInUrl(e.target.value)}
+              placeholder={
+                source === 'LinkedIn' ? 'linkedin.com/in/username' :
+                  source === 'WhatsApp' ? '+1234567890' :
+                    source === 'Website' ? 'https://example.com' :
+                      source === 'Referral' ? 'Name of referrer' :
+                        'Enter details'
+              }
+              disabled={isLocked}
+              className={errors.linkedInUrl ? 'border-destructive' : ''}
+            />
+            {errors.linkedInUrl && <p className="text-xs text-destructive">{errors.linkedInUrl}</p>}
           </div>
 
           {source === 'LinkedIn' && (

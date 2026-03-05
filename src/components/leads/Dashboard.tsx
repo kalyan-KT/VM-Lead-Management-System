@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Lead, ViewFilter } from '@/types/lead';
-import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead, getAdminLeadStats, AdminLeadStat, getAdminDashboardStats, AdminDashboardStats as AdminStatsType, cloneLead, getWebsiteLeads, getStacliLeads } from '@/lib/leadStorage';
+import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead, getAdminLeadStats, AdminLeadStat, getAdminDashboardStats, AdminDashboardStats as AdminStatsType, cloneLead, getWebsiteLeads, getStacliLeads, getVmOnboardingLeads, getStacliOnboardingLeads } from '@/lib/leadStorage';
 import { LeadCard } from './LeadCard';
 import { LeadTable } from './LeadTable';
 import { LeadForm } from './LeadForm';
@@ -10,6 +10,7 @@ import { DashboardStats } from './DashboardStats';
 import { UserLeadActivity } from './UserLeadActivity';
 import { AdminDashboardStats } from './AdminDashboardStats';
 import { WebsiteLeadsView } from './WebsiteLeadsView';
+import { OnboardingLeadsView } from './OnboardingLeadsView';
 import ManageUsers from '@/pages/ManageUsers';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -27,6 +28,8 @@ export function Dashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [websiteLeads, setWebsiteLeads] = useState<Lead[]>([]); // Website Leads State
   const [stacliLeads, setStacliLeads] = useState<Lead[]>([]); // Stacli Leads State
+  const [vmOnboardingLeads, setVmOnboardingLeads] = useState<Lead[]>([]); // VM Onboarding Leads State
+  const [stacliOnboardingLeads, setStacliOnboardingLeads] = useState<Lead[]>([]); // Stacli Onboarding Leads State
   const [activeView, setActiveView] = useState<ViewFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
@@ -70,15 +73,23 @@ export function Dashboard() {
           // Fetch Stacli Leads
           const stacliRes = await getStacliLeads(token);
           setStacliLeads(stacliRes);
+
+          // Fetch VM Onboarding Leads
+          const vmOnboardingRes = await getVmOnboardingLeads(token);
+          setVmOnboardingLeads(vmOnboardingRes);
+
+          // Fetch Stacli Onboarding Leads
+          const stacliOnboardingRes = await getStacliOnboardingLeads(token);
+          setStacliOnboardingLeads(stacliOnboardingRes);
         }
       };
       fetchAdminData();
     }
   }, [isAdmin, getToken, leads]); // Re-fetch stats when leads change (maybe add activeView dependency later)
 
-  // Real-time Poll for Website / Stacli Leads
+  // Real-time Poll for Website / Stacli / VM Onboarding Leads
   useEffect(() => {
-    if (isAdmin && (activeView === 'website_leads' || activeView === 'stacli_leads')) {
+    if (isAdmin && (activeView === 'website_leads' || activeView === 'stacli_leads' || activeView === 'vm_onboarding' || activeView === 'stacli_onboarding')) {
       const fetchExternalLeads = async () => {
         try {
           const token = await getToken();
@@ -88,6 +99,12 @@ export function Dashboard() {
           } else if (activeView === 'stacli_leads') {
             const stacliResp = await getStacliLeads(token);
             setStacliLeads(stacliResp);
+          } else if (activeView === 'vm_onboarding') {
+            const vmOnboardingResp = await getVmOnboardingLeads(token);
+            setVmOnboardingLeads(vmOnboardingResp);
+          } else if (activeView === 'stacli_onboarding') {
+            const stacliOnboardingResp = await getStacliOnboardingLeads(token);
+            setStacliOnboardingLeads(stacliOnboardingResp);
           }
         } catch (error) {
           console.error(`Polling ${activeView} failed`, error);
@@ -187,6 +204,10 @@ export function Dashboard() {
           setWebsiteLeads(webLeads);
           const stacliResp = await getStacliLeads(token || undefined);
           setStacliLeads(stacliResp);
+          const vmOnboardingResp = await getVmOnboardingLeads(token || undefined);
+          setVmOnboardingLeads(vmOnboardingResp);
+          const stacliOnboardingResp = await getStacliOnboardingLeads(token || undefined);
+          setStacliOnboardingLeads(stacliOnboardingResp);
         } catch (e) { console.error("Failed to refresh external leads", e); }
       }
     }
@@ -206,12 +227,16 @@ export function Dashboard() {
       // Update selected lead to match the FRESH data from server/utils
       setSelectedLead(updatedLead);
 
-      // Refresh Website/Stacli Leads if Admin (in case we updated one)
+      // Refresh Website/Stacli/VM Onboarding Leads if Admin (in case we updated one)
       if (isAdmin) {
         const webLeads = await getWebsiteLeads(token || undefined);
         setWebsiteLeads(webLeads);
         const stacliResp = await getStacliLeads(token || undefined);
         setStacliLeads(stacliResp);
+        const vmOnboardingResp = await getVmOnboardingLeads(token || undefined);
+        setVmOnboardingLeads(vmOnboardingResp);
+        const stacliOnboardingResp = await getStacliOnboardingLeads(token || undefined);
+        setStacliOnboardingLeads(stacliOnboardingResp);
       }
     } catch (error) {
       console.error("Failed to update lead", error);
@@ -305,6 +330,10 @@ export function Dashboard() {
         return websiteLeads;
       case 'stacli_leads':
         return stacliLeads;
+      case 'vm_onboarding':
+        return vmOnboardingLeads;
+      case 'stacli_onboarding':
+        return stacliOnboardingLeads;
     }
 
     return result;
@@ -464,6 +493,8 @@ export function Dashboard() {
               {activeView === 'users' && 'User Management'}
               {activeView === 'website_leads' && 'Website Leads'}
               {activeView === 'stacli_leads' && 'Stacli Website Leads'}
+              {activeView === 'vm_onboarding' && 'VM-Client Onboarding'}
+              {activeView === 'stacli_onboarding' && 'Stacli-Client Onboarding'}
               {activeView === 'user_leads' && (
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="icon" onClick={() => setActiveView('all')} className="-ml-2 h-8 w-8">
@@ -521,6 +552,18 @@ export function Dashboard() {
           ) : activeView === 'stacli_leads' ? (
             <WebsiteLeadsView
               leads={stacliLeads}
+              onUpdateLead={handleUpdateLead}
+              onDeleteLead={handleDeleteLead}
+            />
+          ) : activeView === 'vm_onboarding' ? (
+            <OnboardingLeadsView
+              leads={vmOnboardingLeads}
+              onUpdateLead={handleUpdateLead}
+              onDeleteLead={handleDeleteLead}
+            />
+          ) : activeView === 'stacli_onboarding' ? (
+            <OnboardingLeadsView
+              leads={stacliOnboardingLeads}
               onUpdateLead={handleUpdateLead}
               onDeleteLead={handleDeleteLead}
             />

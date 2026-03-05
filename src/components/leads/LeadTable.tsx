@@ -60,27 +60,37 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
     const handleExport = () => {
         // Generate CSV
         const headers = [
-            'Name',
+            'Person Name',
+            'Company Name',
+            'Designation',
             'Source',
+            'Outreach Channel',
             'Status',
             'Priority',
             'Next Action',
             'Next Action Date',
             'Overdue',
             'Tags',
-            'Primary Contact',
+            'Email',
+            'Contact Number',
+            'Primary Contact (Legacy)',
             'LinkedIn URL'
         ];
 
         const rows = sortedLeads.map(lead => [
             lead.name,
+            lead.companyName || '',
+            lead.designation || '',
             lead.source,
+            (lead.outreachChannel || []).join('; '),
             lead.status,
             lead.priority,
             lead.nextAction,
             lead.nextActionDate,
             isOverdue(lead.nextActionDate) ? 'Yes' : 'No',
             lead.tags.join('; '),
+            lead.email || '',
+            lead.contactNumber || '',
             lead.primaryContact,
             lead.linkedInUrl
         ]);
@@ -178,7 +188,10 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
                                                 index % 2 === 0 ? "bg-card" : "bg-muted/20", // Note: Sticky might be slightly transparent
                                                 overdue ? "bg-red-50 dark:bg-red-900/10" : today ? "bg-orange-50 dark:bg-orange-900/10" : ""
                                             )}>
-                                                {lead.name}
+                                                <div className="flex flex-col">
+                                                    <span>{lead.name}</span>
+                                                    {lead.companyName && <span className="text-xs text-muted-foreground font-normal">{lead.companyName}</span>}
+                                                </div>
                                             </TableCell>
                                             <TableCell>{lead.source}</TableCell>
                                             <TableCell>
@@ -226,7 +239,9 @@ export function LeadTable({ leads, onLeadClick }: LeadTableProps) {
                                                     )}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{lead.primaryContact}</TableCell>
+                                            <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                                                {lead.email || lead.contactNumber || lead.primaryContact || <span className="italic text-xs opacity-50">-</span>}
+                                            </TableCell>
                                             <TableCell className="hidden md:table-cell text-right">
                                                 {lead.relevantLinks && lead.relevantLinks.length > 0 ? (
                                                     <Button
