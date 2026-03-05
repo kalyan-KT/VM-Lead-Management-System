@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { ClerkExpressRequireAuth } = require('@clerk/clerk-sdk-node');
-const { getFolders, createFolder, deleteFolder } = require('../controllers/folders.controller');
+const { getFolders, createFolder, deleteFolder, updateFolder } = require('../controllers/folders.controller');
 
 // All routes require authentication
 router.use(ClerkExpressRequireAuth());
@@ -11,6 +11,7 @@ router.route('/')
     .post(createFolder);
 
 router.route('/:id')
+    .put(updateFolder)
     .delete(deleteFolder);
 
 module.exports = router;

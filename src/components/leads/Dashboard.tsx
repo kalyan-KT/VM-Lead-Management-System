@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Lead, ViewFilter, Folder } from '@/types/lead';
-import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead, getAdminLeadStats, AdminLeadStat, getAdminDashboardStats, AdminDashboardStats as AdminStatsType, cloneLead, getWebsiteLeads, getStacliLeads, getVmOnboardingLeads, getStacliOnboardingLeads, getFolders, createFolder, deleteFolder } from '@/lib/leadStorage';
+import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead, getAdminLeadStats, AdminLeadStat, getAdminDashboardStats, AdminDashboardStats as AdminStatsType, cloneLead, getWebsiteLeads, getStacliLeads, getVmOnboardingLeads, getStacliOnboardingLeads, getFolders, createFolder, deleteFolder as apiDeleteFolder, updateFolder } from '@/lib/leadStorage';
 import { LeadCard } from './LeadCard';
 import { LeadTable } from './LeadTable';
+import { FoldersView } from './FoldersView';
 import { LeadForm } from './LeadForm';
 import { LeadDetail } from './LeadDetail';
 import { LeadSidebar } from './LeadSidebar';
@@ -264,6 +265,43 @@ export function Dashboard() {
     }
   };
 
+  const handleRenameFolder = async (id: string, name: string): Promise<boolean> => {
+    try {
+      const token = await getToken();
+      const updatedFolder = await updateFolder(id, name, token || undefined);
+      if (updatedFolder) {
+        setFolders(prev => prev.map(f => f.id === id ? updatedFolder : f));
+        // Also update any leads locally if needed (UI will handle since it's re-rendering)
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Failed to rename folder:', error);
+      return false;
+    }
+  };
+
+  const handleDeleteFolder = async (id: string): Promise<boolean> => {
+    try {
+      const token = await getToken();
+      const success = await apiDeleteFolder(id, token || undefined);
+      if (success) {
+        setFolders(prev => prev.filter(f => f.id !== id));
+        // Refresh leads to ensure folderId is cleared from leads (if backend does it, or we just reload leads)
+        const data = await getLeads(token || undefined);
+        setLeads(data);
+        if (activeView === `folder_${id}`) {
+          setActiveView('folders');
+        }
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Failed to delete folder:', error);
+      return false;
+    }
+  };
+
   const handleClone = async (lead: Lead) => {
     try {
       if (!confirm(`Clone "${lead.name}" to your leads?`)) return;
@@ -349,6 +387,9 @@ export function Dashboard() {
           if (selectedUserForLeads) {
             result = result.filter((l) => l.createdBy === selectedUserForLeads.id);
           }
+          break;
+        case 'folders':
+          // Folders view doesn't filter leads in the main list, handled distinctly
           break;
         case 'website_leads':
           return websiteLeads;
@@ -519,6 +560,7 @@ export function Dashboard() {
               {activeView === 'closed' && 'Closed / Dropped'}
               {activeView === 'active' && 'Active Leads'}
               {activeView === 'closed' && 'Closed / Dropped'}
+              {activeView === 'folders' && ''} {/* Title handled inside FoldersView */}
               {activeView === 'users' && 'User Management'}
               {activeView === 'website_leads' && 'Website Leads'}
               {activeView === 'stacli_leads' && 'Stacli Website Leads'}
@@ -573,7 +615,16 @@ export function Dashboard() {
         </header>
 
         <div className="p-6">
-          {activeView === 'users' ? (
+          {activeView === 'folders' ? (
+            <FoldersView
+              folders={folders}
+              leads={leads}
+              onCreateFolder={handleCreateFolder}
+              onRenameFolder={handleRenameFolder}
+              onDeleteFolder={handleDeleteFolder}
+              onViewFolder={setActiveView}
+            />
+          ) : activeView === 'users' ? (
             <ManageUsers />
           ) : activeView === 'website_leads' ? (
             <WebsiteLeadsView

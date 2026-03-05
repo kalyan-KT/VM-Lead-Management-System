@@ -98,6 +98,7 @@ export function LeadSidebar({
   const navItems = [
     { id: 'all' as ViewFilter, label: 'Dashboard', icon: LayoutDashboard, count: counts.all },
     { id: 'table' as ViewFilter, label: 'Table Views', icon: Table, count: counts.all },
+    { id: 'folders' as ViewFilter, label: 'Folders', icon: FolderOpen, count: folders.length },
     { id: 'overdue' as ViewFilter, label: 'Overdue', icon: AlertCircle, count: counts.overdue, danger: true },
     { id: 'today' as ViewFilter, label: "Today's Follow-ups", icon: Flame, count: counts.today, warning: true },
     { id: 'active' as ViewFilter, label: 'Active Leads', icon: Users, count: counts.active },
@@ -179,81 +180,8 @@ export function LeadSidebar({
             )}
           </button>
         ))}
-
-        {/* Folders Section */}
-        <div className="pt-4 pb-2">
-          <div className="px-3 flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            <span>Folders</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 rounded hover:bg-sidebar-accent text-muted-foreground hover:text-foreground"
-              onClick={() => setIsCreatingFolder(true)}
-              title="New Folder"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-
-          {isCreatingFolder && (
-            <div className="px-3 mb-2 flex items-center gap-2">
-              <Input
-                autoFocus
-                size={1}
-                className="h-7 text-xs bg-sidebar-accent"
-                placeholder="Folder name..."
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleCreateFolder();
-                  if (e.key === 'Escape') setIsCreatingFolder(false);
-                }}
-              />
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleCreateFolder}>
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
-
-          {folders.map((folder) => {
-            const folderViewId = `folder_${folder.id}` as ViewFilter;
-            const folderCount = leads.filter(l => l.folderId === folder.id).length;
-            return (
-              <button
-                key={folder.id}
-                onClick={() => {
-                  onViewChange(folderViewId);
-                  onItemClick?.();
-                }}
-                className={cn(
-                  'sidebar-nav-item w-full justify-between mt-1',
-                  activeView === folderViewId ? 'sidebar-nav-item-active' : 'sidebar-nav-item-inactive'
-                )}
-              >
-                <span className="flex items-center gap-3">
-                  <FolderOpen className="h-4 w-4" />
-                  <span className="truncate max-w-[120px] text-left">{folder.name}</span>
-                </span>
-                <span className={cn(
-                  'text-xs px-2 py-0.5 rounded-full',
-                  activeView === folderViewId
-                    ? 'bg-sidebar-primary-foreground/20'
-                    : 'bg-muted'
-                )}>
-                  {folderCount}
-                </span>
-              </button>
-            );
-          })}
-          {folders.length === 0 && !isCreatingFolder && (
-            <div className="px-4 py-2 text-xs text-muted-foreground italic">
-              No folders yet
-            </div>
-          )}
-        </div>
       </nav>
 
-      {/* Filters removed */}
       <div className="p-4 border-t border-sidebar-border" />
     </aside>
   );

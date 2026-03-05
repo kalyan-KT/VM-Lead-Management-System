@@ -69,7 +69,7 @@ export interface Lead {
   phone?: string;
 }
 
-export type ViewFilter = 'all' | 'today' | 'overdue' | 'active' | 'closed' | 'table' | 'users' | 'user_leads' | 'website_leads' | 'stacli_leads' | 'vm_onboarding' | 'stacli_onboarding' | `folder_${string}`;
+export type ViewFilter = 'all' | 'today' | 'overdue' | 'active' | 'closed' | 'table' | 'folders' | 'users' | 'user_leads' | 'website_leads' | 'stacli_leads' | 'vm_onboarding' | 'stacli_onboarding' | `folder_${string}`;
 
 export interface Folder {
   id: string;

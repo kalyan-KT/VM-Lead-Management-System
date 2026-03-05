@@ -143,6 +143,21 @@ export const createFolder = async (name: string, token?: string): Promise<Folder
   }
 };
 
+export const updateFolder = async (id: string, name: string, token?: string): Promise<Folder | null> => {
+  try {
+    const response = await fetch(`/api/folders/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify({ name }),
+    });
+    if (!response.ok) throw new Error('Failed to update folder');
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating folder:', error);
+    return null;
+  }
+};
+
 export const deleteFolder = async (id: string, token?: string): Promise<boolean> => {
   try {
     const response = await fetch(`/api/folders/${id}`, {

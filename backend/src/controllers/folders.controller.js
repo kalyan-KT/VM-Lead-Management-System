@@ -57,3 +57,32 @@ exports.deleteFolder = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+// @desc    Update a folder
+// @route   PUT /api/folders/:id
+// @access  Private
+exports.updateFolder = async (req, res) => {
+    try {
+        const { userId } = req.auth;
+        const { name } = req.body;
+
+        if (!name) {
+            return res.status(400).json({ message: 'Folder name is required' });
+        }
+
+        const folder = await Folder.findOneAndUpdate(
+            { _id: req.params.id, createdBy: userId },
+            { name },
+            { new: true }
+        );
+
+        if (!folder) {
+            return res.status(404).json({ message: 'Folder not found or unauthorized' });
+        }
+
+        res.status(200).json(folder);
+    } catch (error) {
+        console.error('Error updating folder:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
