@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Lead, ViewFilter } from '@/types/lead';
-import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead, getAdminLeadStats, AdminLeadStat, getAdminDashboardStats, AdminDashboardStats as AdminStatsType, cloneLead, getWebsiteLeads, getStacliLeads, getVmOnboardingLeads, getStacliOnboardingLeads } from '@/lib/leadStorage';
+import { Lead, ViewFilter, Folder } from '@/types/lead';
+import { getLeads, saveLead, isOverdue, isToday, isUpcoming, isActiveStatus, deleteLead, getAdminLeadStats, AdminLeadStat, getAdminDashboardStats, AdminDashboardStats as AdminStatsType, cloneLead, getWebsiteLeads, getStacliLeads, getVmOnboardingLeads, getStacliOnboardingLeads, getFolders, createFolder, deleteFolder } from '@/lib/leadStorage';
 import { LeadCard } from './LeadCard';
 import { LeadTable } from './LeadTable';
 import { LeadForm } from './LeadForm';
@@ -30,6 +30,7 @@ export function Dashboard() {
   const [stacliLeads, setStacliLeads] = useState<Lead[]>([]); // Stacli Leads State
   const [vmOnboardingLeads, setVmOnboardingLeads] = useState<Lead[]>([]); // VM Onboarding Leads State
   const [stacliOnboardingLeads, setStacliOnboardingLeads] = useState<Lead[]>([]); // Stacli Onboarding Leads State
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [activeView, setActiveView] = useState<ViewFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
@@ -51,6 +52,8 @@ export function Dashboard() {
       const token = await getToken();
       const data = await getLeads(token || undefined);
       setLeads(data);
+      const foldersData = await getFolders(token || undefined);
+      setFolders(foldersData);
     };
     fetchLeads();
   }, [getToken]);
@@ -244,6 +247,23 @@ export function Dashboard() {
     }
   };
 
+  const handleCreateFolder = async (name: string): Promise<Folder | null> => {
+    try {
+      const token = await getToken();
+      const newFolder = await createFolder(name, token || undefined);
+      if (newFolder) {
+        setFolders(prev => [...prev, newFolder]);
+        return newFolder;
+      } else {
+        alert('Failed to create folder.');
+        return null;
+      }
+    } catch (error) {
+      console.error('Failed to create folder:', error);
+      return null;
+    }
+  };
+
   const handleClone = async (lead: Lead) => {
     try {
       if (!confirm(`Clone "${lead.name}" to your leads?`)) return;
@@ -309,31 +329,36 @@ export function Dashboard() {
     }
 
     // View filter
-    switch (activeView) {
-      case 'overdue':
-        result = result.filter((l) => isOverdue(l.nextActionDate) && isActiveStatus(l.status));
-        break;
-      case 'today':
-        result = result.filter((l) => isToday(l.nextActionDate) && isActiveStatus(l.status));
-        break;
-      case 'active':
-        result = result.filter((l) => isActiveStatus(l.status));
-        break;
-      case 'closed':
-        return result.filter((l) => ['Closed', 'Dropped'].includes(l.status));
-      case 'user_leads':
-        if (selectedUserForLeads) {
-          result = result.filter((l) => l.createdBy === selectedUserForLeads.id);
-        }
-        break;
-      case 'website_leads':
-        return websiteLeads;
-      case 'stacli_leads':
-        return stacliLeads;
-      case 'vm_onboarding':
-        return vmOnboardingLeads;
-      case 'stacli_onboarding':
-        return stacliOnboardingLeads;
+    if (typeof activeView === 'string' && activeView.startsWith('folder_')) {
+      const folderId = activeView.replace('folder_', '');
+      result = result.filter(l => l.folderId === folderId);
+    } else {
+      switch (activeView) {
+        case 'overdue':
+          result = result.filter((l) => isOverdue(l.nextActionDate) && isActiveStatus(l.status));
+          break;
+        case 'today':
+          result = result.filter((l) => isToday(l.nextActionDate) && isActiveStatus(l.status));
+          break;
+        case 'active':
+          result = result.filter((l) => isActiveStatus(l.status));
+          break;
+        case 'closed':
+          return result.filter((l) => ['Closed', 'Dropped'].includes(l.status));
+        case 'user_leads':
+          if (selectedUserForLeads) {
+            result = result.filter((l) => l.createdBy === selectedUserForLeads.id);
+          }
+          break;
+        case 'website_leads':
+          return websiteLeads;
+        case 'stacli_leads':
+          return stacliLeads;
+        case 'vm_onboarding':
+          return vmOnboardingLeads;
+        case 'stacli_onboarding':
+          return stacliOnboardingLeads;
+      }
     }
 
     return result;
@@ -457,6 +482,8 @@ export function Dashboard() {
                 onPriorityFilterChange={setPriorityFilter}
                 className="w-full border-r-0"
                 onItemClick={() => setMobileMenuOpen(false)}
+                folders={folders}
+                onCreateFolder={handleCreateFolder}
               />
             </SheetContent>
           </Sheet>
@@ -476,6 +503,8 @@ export function Dashboard() {
         priorityFilter={priorityFilter}
         onPriorityFilterChange={setPriorityFilter}
         className="hidden md:flex"
+        folders={folders}
+        onCreateFolder={handleCreateFolder}
       />
 
       <main className="flex-1 overflow-y-auto h-[calc(100vh-65px)] md:h-screen">
@@ -502,6 +531,9 @@ export function Dashboard() {
                   </Button>
                   <span>Leads by {selectedUserForLeads?.email}</span>
                 </div>
+              )}
+              {typeof activeView === 'string' && activeView.startsWith('folder_') && (
+                <span>Folder: {folders.find(f => f.id === activeView.replace('folder_', ''))?.name || 'Unknown'}</span>
               )}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -631,6 +663,8 @@ export function Dashboard() {
         onSave={handleSaveLead}
         existingLead={editingLead}
         availableTags={allTags}
+        folders={folders}
+        onCreateFolder={handleCreateFolder}
       />
 
       <LeadDetail

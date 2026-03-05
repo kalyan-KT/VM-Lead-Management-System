@@ -21,8 +21,10 @@ app.get('/', (req, res) => {
 // Import Routes
 const leadRoutes = require('./routes/leads.routes');
 const adminRoutes = require('./routes/admin.routes');
+const folderRoutes = require('./routes/folders.routes');
 
 app.use('/api/leads', leadRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/folders', folderRoutes);
 
 module.exports = app;

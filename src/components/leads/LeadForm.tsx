@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useUser, useAuth } from '@clerk/clerk-react';
-import { Lead, LeadSource, LeadStatus, LeadPriority } from '@/types/lead';
+import { Lead, LeadSource, LeadStatus, LeadPriority, Folder } from '@/types/lead';
 import { generateId, getToday, isLockedStatus } from '@/lib/leadStorage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,8 @@ interface LeadFormProps {
   onSave: (lead: Lead) => void;
   existingLead?: Lead;
   availableTags?: string[];
+  folders?: Folder[];
+  onCreateFolder?: (name: string) => Promise<Folder | null>;
 }
 
 const SOURCES: LeadSource[] = ['LinkedIn', 'WhatsApp', 'Referral', 'Website', 'Other'];
@@ -41,7 +43,7 @@ const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Follow-up', '
 const PRIORITIES: LeadPriority[] = ['High', 'Medium', 'Low'];
 const OUTREACH_CHANNELS = ['Email', 'Whatsapp', 'Cold Calling', 'Field'];
 
-export function LeadForm({ open, onClose, onSave, existingLead, availableTags = [] }: LeadFormProps) {
+export function LeadForm({ open, onClose, onSave, existingLead, availableTags = [], folders = [], onCreateFolder }: LeadFormProps) {
   // Deduplicate tags for the list
   const userTags = Array.from(new Set(availableTags)).sort();
   const [name, setName] = useState('');
@@ -56,6 +58,9 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
   const [status, setStatus] = useState<LeadStatus>('New');
   const [nextAction, setNextAction] = useState('Contact lead');
   const [nextActionDate, setNextActionDate] = useState(getToday());
+  const [folderId, setFolderId] = useState<string>('none');
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
   const [contextNote, setContextNote] = useState('');
   const [priority, setPriority] = useState<LeadPriority>('Medium');
   const [tags, setTags] = useState<string[]>([]);
@@ -100,6 +105,7 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
       setPriority(existingLead.priority);
       setTags(existingLead.tags);
       setValueEstimate(existingLead.valueEstimate || '');
+      setFolderId(existingLead.folderId || 'none');
       // Sync new fields
       setRelevantLinks(existingLead.relevantLinks || []);
       setDocuments(existingLead.documents || []);
@@ -131,6 +137,9 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
     setTags([]);
     setTagInput('');
     setValueEstimate('');
+    setFolderId('none');
+    setIsCreatingFolder(false);
+    setNewFolderName('');
     setRelevantLinks([]);
     setDocuments([]);
     setFollowUps([]);
@@ -232,6 +241,8 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
       nextActionDate: nextActionDate || '', // Send empty string if optional
       contextNote: contextNote.trim() || undefined,
       priority,
+      folderId: folderId && folderId !== 'none' ? folderId : undefined,
+      folderName: folderId && folderId !== 'none' ? folders?.find(f => f.id === folderId)?.name || undefined : undefined,
       tags,
       valueEstimate: valueEstimate.trim() || undefined,
       relevantLinks: finalLinks,
@@ -448,6 +459,86 @@ export function LeadForm({ open, onClose, onSave, existingLead, availableTags = 
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="folder">Folder</Label>
+                {onCreateFolder && !isLocked && !isCreatingFolder && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 text-xs"
+                    onClick={() => setIsCreatingFolder(true)}
+                  >
+                    + New Folder
+                  </Button>
+                )}
+              </div>
+
+              {isCreatingFolder ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    autoFocus
+                    placeholder="Folder name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newFolderName.trim() && onCreateFolder) {
+                          onCreateFolder(newFolderName.trim()).then(folder => {
+                            if (folder) {
+                              setFolderId(folder.id);
+                              setIsCreatingFolder(false);
+                              setNewFolderName('');
+                            }
+                          });
+                        }
+                      } else if (e.key === 'Escape') {
+                        setIsCreatingFolder(false);
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    onClick={async () => {
+                      if (newFolderName.trim() && onCreateFolder) {
+                        const folder = await onCreateFolder(newFolderName.trim());
+                        if (folder) {
+                          setFolderId(folder.id);
+                          setIsCreatingFolder(false);
+                          setNewFolderName('');
+                        }
+                      }
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setIsCreatingFolder(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Select value={folderId} onValueChange={setFolderId} disabled={isLocked}>
+                  <SelectTrigger id="folder">
+                    <SelectValue placeholder="No Folder" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Folder</SelectItem>
+                    {folders.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="space-y-2">

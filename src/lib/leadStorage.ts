@@ -1,4 +1,4 @@
-import { Lead, LeadStatus, ConversationNote } from '@/types/lead';
+import { Lead, LeadStatus, ConversationNote, Folder } from '@/types/lead';
 
 const API_URL = '/api/leads';
 
@@ -111,6 +111,48 @@ export const getStacliOnboardingLeads = async (token?: string): Promise<Lead[]> 
   } catch (error) {
     console.error('Error fetching stacli onboarding leads:', error);
     return [];
+  }
+};
+
+// Folders API
+export const getFolders = async (token?: string): Promise<Folder[]> => {
+  try {
+    const response = await fetch('/api/folders', {
+      headers: getHeaders(token),
+    });
+    if (!response.ok) throw new Error('Failed to fetch folders');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching folders:', error);
+    return [];
+  }
+};
+
+export const createFolder = async (name: string, token?: string): Promise<Folder | null> => {
+  try {
+    const response = await fetch('/api/folders', {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({ name }),
+    });
+    if (!response.ok) throw new Error('Failed to create folder');
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating folder:', error);
+    return null;
+  }
+};
+
+export const deleteFolder = async (id: string, token?: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`/api/folders/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('Error deleting folder:', error);
+    return false;
   }
 };
 

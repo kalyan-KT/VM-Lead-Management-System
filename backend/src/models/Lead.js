@@ -98,6 +98,15 @@ const leadSchema = new mongoose.Schema({
         type: String,
         default: null,
     },
+    // Folders
+    folderId: {
+        type: String,
+        default: null,
+    },
+    folderName: {
+        type: String, // Storing name directly for ease of use in UI without constant population
+        default: null,
+    },
     // New Fields
     relevantLinks: {
         type: [String],

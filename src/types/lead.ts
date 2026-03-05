@@ -59,6 +59,9 @@ export interface Lead {
   outreachChannel?: string[];
   email?: string;
   contactNumber?: string;
+  // Folders
+  folderId?: string;
+  folderName?: string;
   company?: string;
   service?: string;
   budget?: string;
@@ -66,4 +69,12 @@ export interface Lead {
   phone?: string;
 }
 
-export type ViewFilter = 'all' | 'today' | 'overdue' | 'active' | 'closed' | 'table' | 'users' | 'user_leads' | 'website_leads' | 'stacli_leads' | 'vm_onboarding' | 'stacli_onboarding';
+export type ViewFilter = 'all' | 'today' | 'overdue' | 'active' | 'closed' | 'table' | 'users' | 'user_leads' | 'website_leads' | 'stacli_leads' | 'vm_onboarding' | 'stacli_onboarding' | `folder_${string}`;
+
+export interface Folder {
+  id: string;
+  name: string;
+  createdBy: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
